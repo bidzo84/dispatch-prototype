@@ -1,0 +1,1718 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>DISPATCH</title>
+<style>
+/* ============================================================
+   DISPATCH  //  single-file prototype
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%;overscroll-behavior:none}
+:root{
+  --bg:#05070d; --bg2:#080c15; --bg3:#0d1220;
+  --panel:rgba(255,255,255,.045);
+  --panel2:rgba(255,255,255,.075);
+  --line:rgba(255,255,255,.085);
+  --line2:rgba(255,255,255,.16);
+  --txt:#e9eef8; --dim:#8892a6; --dim2:#5d6679;
+  --cy:#22d3ee; --mg:#ff3ad4; --am:#fbbf24; --gr:#34d399; --rd:#fb5c6c; --vi:#a78bfa; --bl:#4f8bff;
+  --ac:#22d3ee; --ac2:#ff3ad4;
+  --c-common:#95a0b3; --c-uncommon:#34d399; --c-rare:#38bdf8;
+  --c-epic:#b06bff; --c-legendary:#fbbf24; --c-mythic:#ff4d5e; --c-prototype:#ffffff;
+  --sat:env(safe-area-inset-top); --sab:env(safe-area-inset-bottom);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+}
+body{
+  font-family:var(--sans); color:var(--txt); background:var(--bg);
+  -webkit-font-smoothing:antialiased; user-select:none;
+}
+/* --- ambient background --- */
+#bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg)}
+#bg .glow{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;transition:background 1.2s ease}
+#bg .g1{width:70vw;height:70vw;left:-25vw;top:-18vh;background:radial-gradient(circle,var(--ac),transparent 68%)}
+#bg .g2{width:65vw;height:65vw;right:-25vw;top:26vh;background:radial-gradient(circle,var(--ac2),transparent 68%);opacity:.32}
+#bg .g3{width:80vw;height:60vw;left:-10vw;bottom:-20vh;background:radial-gradient(circle,#1b2a6b,transparent 70%);opacity:.42}
+#bg .grid{position:absolute;inset:-40%;
+  background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px);
+  background-size:42px 42px;
+  transform:perspective(340px) rotateX(58deg) translateY(6%);
+  mask-image:radial-gradient(ellipse at 50% 22%,#000 0%,transparent 66%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 22%,#000 0%,transparent 66%);
+  animation:gridflow 14s linear infinite; opacity:.75;
+}
+@keyframes gridflow{to{background-position:0 42px,0 0}}
+#bg .scan{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px);opacity:.5}
+#bg .vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,transparent 35%,rgba(0,0,0,.72) 100%)}
+
+/* --- shell --- */
+#app{position:relative;z-index:1;height:100dvh;max-width:520px;margin:0 auto;display:flex;flex-direction:column;overflow:hidden}
+
+/* --- top bar --- */
+#top{padding:calc(var(--sat) + 8px) 12px 8px;flex:0 0 auto;
+  background:linear-gradient(180deg,rgba(5,7,13,.92),rgba(5,7,13,.55) 70%,transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+.brandrow{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.brand{font-family:var(--mono);font-size:13px;letter-spacing:.34em;font-weight:700;
+  background:linear-gradient(90deg,var(--ac),var(--ac2));-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 12px color-mix(in srgb,var(--ac) 55%,transparent))}
+.brand-sub{font-family:var(--mono);font-size:9px;letter-spacing:.2em;color:var(--dim2);margin-left:auto;text-align:right;line-height:1.4}
+.lvlpill{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;color:var(--dim);
+  border:1px solid var(--line);border-radius:999px;padding:3px 8px;background:var(--panel)}
+.lvlpill b{color:var(--txt);font-size:11px}
+.xpbar{width:46px;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:2px;transition:width .5s}
+.cur{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.cbox{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;border-radius:11px;
+  border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.015));position:relative;overflow:hidden}
+.cbox svg{width:15px;height:15px}
+.cbox .v{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.02em}
+.cbox .k{font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;color:var(--dim2)}
+.cbox.bump{animation:bump .5s ease}
+@keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.16)}100%{transform:scale(1)}}
+.cbox.bump::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 40%,var(--ac),transparent 70%);opacity:.45;animation:fadeout .6s ease forwards}
+@keyframes fadeout{to{opacity:0}}
+
+/* --- scroll body --- */
+#view{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  padding:6px 12px calc(96px + var(--sab));scrollbar-width:none}
+#view::-webkit-scrollbar{display:none}
+.screen{animation:sIn .34s cubic-bezier(.22,1,.36,1)}
+@keyframes sIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* --- typography bits --- */
+.sect{display:flex;align-items:center;gap:8px;margin:18px 2px 9px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.24em;color:var(--dim2);text-transform:uppercase}
+.sect::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line2),transparent)}
+.sect .cnt{color:var(--ac);letter-spacing:.1em}
+h2.title{font-size:21px;margin:6px 0 2px;letter-spacing:-.02em;font-weight:800}
+p.lede{margin:0 0 4px;color:var(--dim);font-size:12.5px;line-height:1.55}
+.mono{font-family:var(--mono)}
+
+/* --- generic card --- */
+.card{position:relative;border-radius:16px;border:1px solid var(--line);
+  background:linear-gradient(165deg,rgba(255,255,255,.07),rgba(255,255,255,.018));
+  overflow:hidden;margin-bottom:10px}
+.card::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.06) 48%,transparent 62%)}
+.tap{cursor:pointer;transition:transform .13s ease,border-color .2s}
+.tap:active{transform:scale(.978)}
+
+/* --- buttons --- */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border:none;border-radius:14px;
+  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.16em;color:#04070e;cursor:pointer;
+  background:linear-gradient(100deg,var(--ac),var(--ac2));
+  box-shadow:0 8px 26px -8px color-mix(in srgb,var(--ac) 75%,transparent),inset 0 1px 0 rgba(255,255,255,.45);
+  transition:transform .12s,filter .2s}
+.btn:active{transform:scale(.97);filter:brightness(1.15)}
+.btn[disabled]{background:rgba(255,255,255,.07);color:var(--dim2);box-shadow:none;cursor:default}
+.btn.ghost{background:var(--panel);color:var(--txt);border:1px solid var(--line2);box-shadow:none}
+.btn.sm{padding:10px;font-size:10.5px}
+.btn.danger{background:linear-gradient(100deg,#ff5f6d,#ff2e63)}
+
+/* --- chips --- */
+.chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;letter-spacing:.1em;
+  padding:4px 7px;border-radius:7px;border:1px solid var(--line);color:var(--dim);background:rgba(255,255,255,.04);white-space:nowrap}
+.chip.pos{color:var(--gr);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.09)}
+.chip.neg{color:var(--rd);border-color:rgba(251,92,108,.3);background:rgba(251,92,108,.09)}
+.chip.rare{color:var(--vi);border-color:rgba(167,139,250,.35);background:rgba(167,139,250,.1)}
+.chip.ac{color:var(--ac);border-color:color-mix(in srgb,var(--ac) 35%,transparent);background:color-mix(in srgb,var(--ac) 10%,transparent)}
+.chiprow{display:flex;flex-wrap:wrap;gap:5px}
+
+/* --- risk colors --- */
+.r-safe{--rk:#34d399}.r-standard{--rk:#38bdf8}.r-risky{--rk:#fbbf24}
+.r-extreme{--rk:#ff7a45}.r-legendary{--rk:#ff3d71}
+
+/* --- mission card --- */
+.mcard{padding:13px 13px 12px;padding-left:16px}
+.mcard::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rk);
+  box-shadow:0 0 14px var(--rk)}
+.mhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.mname{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.mmeta{font-family:var(--mono);font-size:9px;letter-spacing:.13em;color:var(--dim2);margin-top:3px;text-transform:uppercase}
+.ring{flex:0 0 auto;width:50px;height:50px;border-radius:50%;display:grid;place-items:center;position:relative;
+  background:conic-gradient(var(--rk) calc(var(--p)*1%),rgba(255,255,255,.08) 0);}
+.ring::before{content:"";position:absolute;inset:3.5px;border-radius:50%;background:#0a0e17}
+.ring i{position:relative;font-family:var(--mono);font-size:13px;font-weight:700;font-style:normal;color:var(--rk)}
+.ring b{position:absolute;bottom:6px;font-family:var(--mono);font-size:6px;letter-spacing:.1em;color:var(--dim2);font-weight:500}
+.mfoot{display:flex;align-items:center;gap:10px;margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+.stat{display:flex;flex-direction:column;gap:1px}
+.stat .k{font-family:var(--mono);font-size:7.5px;letter-spacing:.16em;color:var(--dim2)}
+.stat .v{font-family:var(--mono);font-size:12.5px;font-weight:700}
+.stat .v.ops{color:var(--am)}
+.go{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.16em;font-weight:700;color:#05070d;
+  padding:8px 13px;border-radius:9px;background:linear-gradient(100deg,var(--ac),var(--ac2));
+  box-shadow:0 6px 18px -6px color-mix(in srgb,var(--ac) 80%,transparent)}
+
+/* --- active mission --- */
+.run{padding:12px 13px}
+.run .top{display:flex;align-items:center;gap:10px}
+.avatar{flex:0 0 auto;width:40px;height:40px;border-radius:11px;overflow:hidden;border:1px solid var(--line2);background:#0b1120}
+.avatar svg{display:block;width:100%;height:100%}
+.run .nm{font-size:13.5px;font-weight:700;line-height:1.2}
+.run .sb{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--dim2);margin-top:2px;text-transform:uppercase}
+.tmr{margin-left:auto;text-align:right}
+.tmr .t{font-family:var(--mono);font-size:16px;font-weight:700;letter-spacing:.02em;color:var(--ac);
+  text-shadow:0 0 16px color-mix(in srgb,var(--ac) 60%,transparent)}
+.tmr .l{font-family:var(--mono);font-size:7.5px;letter-spacing:.16em;color:var(--dim2)}
+.prog{height:4px;border-radius:3px;background:rgba(255,255,255,.09);margin-top:11px;overflow:hidden;position:relative}
+.prog i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width 1s linear}
+.prog::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);
+  transform:translateX(-100%);animation:shim 2.1s infinite}
+@keyframes shim{to{transform:translateX(100%)}}
+.ready .tmr .t{color:var(--gr);text-shadow:0 0 18px rgba(52,211,153,.6);animation:pulse 1.1s infinite}
+@keyframes pulse{50%{opacity:.55}}
+.slotempty{border:1px dashed var(--line2);border-radius:16px;padding:16px;text-align:center;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--dim2);margin-bottom:10px}
+.slotlock{opacity:.45}
+
+/* --- map card --- */
+.mapcard{height:104px;display:flex;align-items:flex-end;padding:12px 13px;position:relative}
+.mapcard .art{position:absolute;inset:0;opacity:.85}
+.mapcard .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(5,7,13,.94) 30%,rgba(5,7,13,.35))}
+.mapcard .in{position:relative;width:100%}
+.mapcard .idx{font-family:var(--mono);font-size:8.5px;letter-spacing:.24em;color:var(--mc)}
+.mapcard .nm{font-size:17px;font-weight:800;letter-spacing:-.02em;margin-top:1px}
+.mapcard .ds{font-size:11px;color:var(--dim);margin-top:2px;line-height:1.35}
+.locked{filter:grayscale(.85) brightness(.62)}
+.lockbadge{position:absolute;right:11px;top:11px;font-family:var(--mono);font-size:8px;letter-spacing:.14em;
+  color:var(--dim);border:1px solid var(--line2);border-radius:6px;padding:3px 6px;background:rgba(0,0,0,.5)}
+
+/* --- sector grid --- */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.scell{position:relative;border-radius:13px;border:1px solid var(--line);padding:11px 10px 10px;
+  background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.015));overflow:hidden}
+.scell .n{font-size:12.5px;font-weight:700;line-height:1.2}
+.scell .m{font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--dim2);margin-top:5px}
+.scell .dot{position:absolute;right:9px;top:9px;width:6px;height:6px;border-radius:50%;background:var(--ac);
+  box-shadow:0 0 10px var(--ac)}
+.scell.undisc{border-style:dashed}
+.scell.undisc .n{color:var(--dim2)}
+
+/* --- crew card --- */
+.crewcard{padding:12px 13px;display:flex;gap:11px;align-items:center}
+.crewcard .av{flex:0 0 auto;width:52px;height:52px;border-radius:14px;overflow:hidden;border:1px solid var(--line2)}
+.crewcard .body{flex:1;min-width:0}
+.crewcard .nm{font-size:14.5px;font-weight:800;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+.cls{font-family:var(--mono);font-size:8px;letter-spacing:.16em;padding:2px 6px;border-radius:5px;
+  border:1px solid color-mix(in srgb,var(--cc) 40%,transparent);color:var(--cc);background:color-mix(in srgb,var(--cc) 12%,transparent)}
+.lvl{font-family:var(--mono);font-size:9px;color:var(--dim2);letter-spacing:.1em;margin-top:3px}
+.bars{display:grid;gap:3px;margin-top:7px}
+.bar{display:grid;grid-template-columns:52px 1fr 22px;gap:6px;align-items:center}
+.bar .k{font-family:var(--mono);font-size:7.5px;letter-spacing:.1em;color:var(--dim2)}
+.bar .t{height:3px;border-radius:2px;background:rgba(255,255,255,.09);overflow:hidden}
+.bar .t i{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,var(--cc),color-mix(in srgb,var(--cc) 30%,#fff));transition:width .6s}
+.bar .v{font-family:var(--mono);font-size:9px;color:var(--dim);text-align:right}
+.busy{position:absolute;right:11px;top:11px;font-family:var(--mono);font-size:7.5px;letter-spacing:.14em;color:var(--am);
+  border:1px solid rgba(251,191,36,.35);background:rgba(251,191,36,.1);padding:3px 6px;border-radius:6px}
+
+/* --- gear --- */
+.ggrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gitem{position:relative;border-radius:13px;padding:11px 10px;border:1px solid color-mix(in srgb,var(--rc) 30%,var(--line));
+  background:linear-gradient(160deg,color-mix(in srgb,var(--rc) 13%,transparent),rgba(255,255,255,.015));overflow:hidden}
+.gitem::after{content:"";position:absolute;right:-16px;top:-16px;width:52px;height:52px;border-radius:50%;
+  background:var(--rc);filter:blur(20px);opacity:.4}
+.gitem .ic{width:22px;height:22px;color:var(--rc);margin-bottom:6px}
+.gitem .n{font-size:12px;font-weight:700;line-height:1.2;position:relative}
+.gitem .e{font-size:10px;color:var(--dim);margin-top:4px;line-height:1.35;position:relative}
+.gitem .r{font-family:var(--mono);font-size:7px;letter-spacing:.18em;color:var(--rc);margin-top:7px;position:relative}
+.gitem .q{position:absolute;right:9px;bottom:8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--rc)}
+.gitem.equipped{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--rc) 60%,transparent)}
+
+/* --- rivals --- */
+.lb{padding:0;overflow:hidden}
+.lbrow{display:flex;align-items:center;gap:10px;padding:11px 13px;border-bottom:1px solid var(--line)}
+.lbrow:last-child{border-bottom:none}
+.lbrow .pos{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--dim2);width:22px}
+.lbrow.me{background:linear-gradient(90deg,color-mix(in srgb,var(--ac) 14%,transparent),transparent)}
+.lbrow.me .pos{color:var(--ac)}
+.lbrow .nm{font-size:13px;font-weight:700}
+.lbrow .tg{font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--dim2);margin-top:2px}
+.lbrow .sc{margin-left:auto;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--am)}
+.lbrow .rv{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:#05070d;
+  background:linear-gradient(100deg,#ff5f6d,#ff2e63);padding:7px 10px;border-radius:8px;font-weight:700}
+
+/* --- log --- */
+.logrow{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.logrow:last-child{border-bottom:none}
+.logrow .d{flex:0 0 auto;width:7px;height:7px;border-radius:50%;margin-top:5px;background:var(--lc);box-shadow:0 0 9px var(--lc)}
+.logrow .tx{font-size:12px;line-height:1.45;color:var(--txt)}
+.logrow .tx b{color:var(--lc)}
+.logrow .tm{font-family:var(--mono);font-size:8px;color:var(--dim2);margin-top:2px;letter-spacing:.1em}
+
+/* --- objectives --- */
+.obj{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.obj .tk{flex:0 0 auto;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line2);display:grid;place-items:center}
+.obj.done .tk{background:var(--gr);border-color:var(--gr)}
+.obj.done .tk svg{width:12px;height:12px;color:#04070e}
+.obj .tt{font-size:12.5px;font-weight:600}
+.obj .pg{font-family:var(--mono);font-size:8.5px;color:var(--dim2);letter-spacing:.1em;margin-top:2px}
+.obj .rw{margin-left:auto;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--am)}
+
+/* --- bottom nav --- */
+#nav{position:absolute;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(5,1fr);
+  padding:8px 10px calc(8px + var(--sab));gap:4px;
+  background:linear-gradient(0deg,rgba(5,7,13,.97) 55%,rgba(5,7,13,.6) 85%,transparent);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+.nb{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 0 5px;border-radius:12px;
+  color:var(--dim2);cursor:pointer;transition:color .2s,background .2s;position:relative}
+.nb svg{width:20px;height:20px}
+.nb span{font-family:var(--mono);font-size:7.5px;letter-spacing:.14em}
+.nb.on{color:var(--ac);background:color-mix(in srgb,var(--ac) 11%,transparent)}
+.nb.on::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:18px;height:2px;
+  border-radius:2px;background:var(--ac);box-shadow:0 0 10px var(--ac)}
+.nb .badge{position:absolute;top:4px;right:calc(50% - 18px);min-width:15px;height:15px;padding:0 4px;border-radius:8px;
+  background:var(--rd);color:#fff;font-family:var(--mono);font-size:8px;font-weight:700;display:grid;place-items:center;
+  box-shadow:0 0 10px rgba(251,92,108,.7)}
+
+/* --- sheet --- */
+#sheetwrap{position:fixed;inset:0;z-index:60;display:none}
+#sheetwrap.on{display:block}
+#sheetbg{position:absolute;inset:0;background:rgba(2,4,9,.72);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+  animation:fin .25s ease}
+@keyframes fin{from{opacity:0}}
+#sheet{position:absolute;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;max-height:92dvh;overflow-y:auto;
+  background:linear-gradient(180deg,#0d1220,#070a12);border-top:1px solid var(--line2);
+  border-radius:24px 24px 0 0;padding:8px 14px calc(20px + var(--sab));
+  box-shadow:0 -24px 60px rgba(0,0,0,.75);animation:sup .38s cubic-bezier(.22,1,.36,1);scrollbar-width:none}
+#sheet::-webkit-scrollbar{display:none}
+@keyframes sup{from{transform:translateY(100%)}}
+.grab{width:36px;height:4px;border-radius:3px;background:var(--line2);margin:6px auto 12px}
+.shead{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px}
+.shead .t{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.shead .s{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--dim2);margin-top:4px;text-transform:uppercase}
+.x{margin-left:auto;flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;color:var(--dim)}
+
+/* selectable pick rows */
+.pick{display:flex;align-items:center;gap:10px;padding:10px 11px;border-radius:13px;border:1px solid var(--line);
+  background:rgba(255,255,255,.035);margin-bottom:7px;transition:border-color .18s,background .18s,transform .12s}
+.pick:active{transform:scale(.985)}
+.pick.on{border-color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 40%,transparent),0 8px 22px -12px var(--ac)}
+.pick.off{opacity:.4}
+.pick .av{width:40px;height:40px;border-radius:11px;overflow:hidden;flex:0 0 auto;border:1px solid var(--line2)}
+.pick .nm{font-size:13px;font-weight:700}
+.pick .sb{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--dim2);margin-top:2px}
+.pick .rt{margin-left:auto;text-align:right;font-family:var(--mono)}
+.pick .rt .big{font-size:14px;font-weight:700;color:var(--ac)}
+.pick .rt .sm{font-size:8px;color:var(--dim2);letter-spacing:.12em}
+
+/* forecast block */
+.fc{border-radius:16px;border:1px solid var(--line);padding:13px;margin:4px 0 12px;
+  background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.01))}
+.fcrow{display:flex;align-items:center;gap:12px}
+.fcbig{font-family:var(--mono);font-size:34px;font-weight:800;letter-spacing:-.02em;color:var(--rk);
+  text-shadow:0 0 26px color-mix(in srgb,var(--rk) 55%,transparent);line-height:1}
+.fclab{font-family:var(--mono);font-size:8.5px;letter-spacing:.16em;color:var(--dim2);margin-top:4px}
+.fcband{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+.fcband i{position:absolute;top:0;bottom:0;background:linear-gradient(90deg,color-mix(in srgb,var(--rk) 35%,transparent),var(--rk));
+  border-radius:5px;transition:all .5s}
+.brk{display:grid;gap:5px;margin-top:11px;padding-top:11px;border-top:1px solid var(--line)}
+.brkrow{display:flex;align-items:center;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em}
+.brkrow .k{color:var(--dim)}
+.brkrow .v{margin-left:auto;font-weight:700}
+.brkrow .v.p{color:var(--gr)}.brkrow .v.n{color:var(--rd)}
+
+/* --- result takeover --- */
+#res{position:fixed;inset:0;z-index:90;display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;text-align:center;background:radial-gradient(ellipse at 50% 42%,color-mix(in srgb,var(--oc) 26%,transparent),rgba(3,5,10,.97) 62%),rgba(3,5,10,.97);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+#res.on{display:flex;animation:fin .3s ease}
+.burst{position:absolute;width:min(78vw,340px);aspect-ratio:1;border-radius:50%;border:1px solid var(--oc);opacity:0;
+  animation:burst 1.5s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes burst{0%{transform:scale(.15);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+.rico{width:74px;height:74px;color:var(--oc);filter:drop-shadow(0 0 26px var(--oc));animation:pop .55s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{from{transform:scale(.2);opacity:0}}
+.rkind{font-family:var(--mono);font-size:11px;letter-spacing:.34em;color:var(--oc);margin-top:16px;
+  text-shadow:0 0 18px var(--oc);animation:sIn .5s .1s backwards}
+.rttl{font-size:27px;font-weight:900;letter-spacing:-.03em;margin-top:7px;line-height:1.1;animation:sIn .5s .16s backwards}
+.rsub{font-size:12.5px;color:var(--dim);margin-top:9px;max-width:300px;line-height:1.55;animation:sIn .5s .22s backwards}
+.rew{display:grid;gap:7px;margin:22px 0 6px;width:min(100%,300px);animation:sIn .5s .3s backwards}
+.rewrow{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:12px;border:1px solid var(--line);
+  background:rgba(255,255,255,.05)}
+.rewrow svg{width:16px;height:16px;color:var(--ac)}
+.rewrow .k{font-family:var(--mono);font-size:9px;letter-spacing:.16em;color:var(--dim)}
+.rewrow .v{margin-left:auto;font-family:var(--mono);font-size:15px;font-weight:800}
+.rewrow.gain .v{color:var(--gr)}.rewrow.loss .v{color:var(--rd)}
+.rewrow.drop{border-color:color-mix(in srgb,var(--rc) 50%,transparent);background:color-mix(in srgb,var(--rc) 12%,transparent)}
+.rewrow.drop svg{color:var(--rc)}.rewrow.drop .v{font-size:12px;color:var(--rc)}
+#res .btn{width:min(100%,300px);margin-top:12px;animation:sIn .5s .38s backwards}
+
+/* --- toast --- */
+#toasts{position:fixed;left:0;right:0;top:calc(var(--sat) + 6px);z-index:80;max-width:520px;margin:0 auto;padding:0 12px;
+  display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.toast{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:14px;
+  border:1px solid color-mix(in srgb,var(--tc) 40%,var(--line));
+  background:linear-gradient(100deg,color-mix(in srgb,var(--tc) 18%,rgba(10,14,22,.96)),rgba(10,14,22,.96));
+  box-shadow:0 14px 34px rgba(0,0,0,.6);animation:tin .4s cubic-bezier(.22,1,.36,1)}
+@keyframes tin{from{transform:translateY(-22px);opacity:0}}
+.toast.out{animation:tout .35s forwards}
+@keyframes tout{to{transform:translateY(-18px);opacity:0}}
+.toast svg{width:17px;height:17px;color:var(--tc);flex:0 0 auto}
+.toast .t{font-family:var(--mono);font-size:8.5px;letter-spacing:.18em;color:var(--tc)}
+.toast .m{font-size:12px;font-weight:600;margin-top:2px;line-height:1.3}
+
+/* --- intro --- */
+#intro{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;background:var(--bg);
+  padding:calc(var(--sat) + 20px) 18px calc(20px + var(--sab));max-width:520px;margin:0 auto;overflow-y:auto}
+#intro.hide{animation:iout .55s forwards}
+@keyframes iout{to{opacity:0;transform:scale(1.06);visibility:hidden}}
+.logo{font-family:var(--mono);font-size:min(13vw,52px);font-weight:800;letter-spacing:.14em;text-align:center;
+  background:linear-gradient(100deg,var(--cy),var(--mg));-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 30px rgba(34,211,238,.45));margin-top:6vh}
+.tag{text-align:center;font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--dim2);margin-top:8px}
+.pitch{text-align:center;font-size:13px;color:var(--dim);line-height:1.65;margin:22px 6px 4px}
+.starter{display:flex;gap:11px;align-items:center;padding:13px;border-radius:17px;border:1px solid var(--line);
+  background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));margin-bottom:9px;transition:all .2s}
+.starter.on{border-color:var(--cc);background:color-mix(in srgb,var(--cc) 13%,transparent);
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--cc) 45%,transparent),0 14px 34px -18px var(--cc)}
+.starter .av{width:60px;height:60px;border-radius:16px;overflow:hidden;flex:0 0 auto;border:1px solid var(--line2)}
+.starter .nm{font-size:17px;font-weight:800;letter-spacing:.02em}
+.starter .rl{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.35}
+.starter .ab{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:var(--cc);margin-top:6px}
+
+.hint{font-family:var(--mono);font-size:8.5px;letter-spacing:.14em;color:var(--dim2);text-align:center;margin-top:10px;line-height:1.7}
+.gg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kv{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--dim2);letter-spacing:.1em}
+.kv .v{font-weight:700}
+.fade{animation:sIn .4s}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-ops" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 7 3.9v7.6l-7 3.9-7-3.9V8.2l7-3.9Z"/><path fill="currentColor" d="M12 7.4 7.5 10v4l4.5 2.6 4.5-2.6v-4L12 7.4Z"/></symbol>
+<symbol id="i-scrap" viewBox="0 0 24 24"><path fill="currentColor" d="M4 14 9 4l2.2 4.4L14 3l6 11-3 7H7l-3-7Zm3.3.4 1.8 4.1h5.8l1.8-4.1-3.3-6-2.6 5-1.9-3.8-1.6 4.8Z"/></symbol>
+<symbol id="i-intel" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M12 5c-4.5 0-8 4.2-9 7 1 2.8 4.5 7 9 7s8-4.2 9-7c-1-2.8-4.5-7-9-7Z"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><path fill="currentColor" d="M14.5 3a6.5 6.5 0 0 0-6.2 8.5L3 16.8V21h4.2l1.2-1.2V18h1.8v-1.8h1.8l1.3-1.3A6.5 6.5 0 1 0 14.5 3Zm2.3 5.2a1.6 1.6 0 1 1 0-3.2 1.6 1.6 0 0 1 0 3.2Z"/></symbol>
+<symbol id="i-xp" viewBox="0 0 24 24"><path fill="currentColor" d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 10.5 12 4l8 6.5V20H4v-9.5Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M9.5 20v-5.5h5V20"/></symbol>
+<symbol id="i-map" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="m3 6.5 6-2.5 6 2.5 6-2.5v13l-6 2.5-6-2.5-6 2.5v-13Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M9 4v13M15 7v13"/></symbol>
+<symbol id="i-crew" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.3" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M16 5.2a3.3 3.3 0 0 1 0 6.4M17.5 14.8c2 .8 3.5 2.7 3.5 5.2"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M12 3.2 5 6.6v5.6c0 4.2 2.9 7.4 7 8.6 4.1-1.2 7-4.4 7-8.6V6.6l-7-3.4Z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="m8.8 12 2.2 2.3 4.2-4.6"/></symbol>
+<symbol id="i-rival" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4 20V9.5M12 20V4M20 20v-7"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M2.5 20h19"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.5 4.5L19 7"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="m6 6 12 12M18 6 6 18"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m14 5-7 7 7 7"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24"><path fill="currentColor" d="m12 2.6 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9 2.9-6Z"/></symbol>
+<symbol id="i-skull" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C7 2 3.5 5.4 3.5 10c0 2.7 1.3 4.6 3 5.8V19a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-3.2c1.7-1.2 3-3.1 3-5.8C20.5 5.4 17 2 12 2ZM8.6 12a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Zm6.8 0a1.9 1.9 0 1 1 0-3.8 1.9 1.9 0 0 1 0 3.8Z"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5 22 20H2L12 2.5Zm-1.1 6.1v5.6h2.2V8.6h-2.2Zm0 7.1v2.2h2.2v-2.2h-2.2Z"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path fill="currentColor" d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M12 5c-4.5 0-8 4.2-9 7 1 2.8 4.5 7 9 7s8-4.2 9-7c-1-2.8-4.5-7-9-7Z"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/></symbol>
+<symbol id="i-cube" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="M12 3 4 7.3v9.4L12 21l8-4.3V7.3L12 3Z"/><path fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" d="m4 7.3 8 4.4 8-4.4M12 11.7V21"/></symbol>
+<symbol id="i-flask" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M9.5 3v6L4.6 18a2 2 0 0 0 1.8 3h11.2a2 2 0 0 0 1.8-3l-4.9-9V3"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M8 3h8M7 14h10"/></symbol>
+<symbol id="i-relic" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2 6 8l6 14 6-14-6-6Zm0 3.2L15.6 9 12 17 8.4 9 12 5.2Z"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 6.8V12l3.4 2.2"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M8.3 10V7.5a3.7 3.7 0 0 1 7.4 0V10"/></symbol>
+<symbol id="i-signal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4.5 15.5a10.6 10.6 0 0 1 15 0M7.8 12.2a6 6 0 0 1 8.4 0"/><circle cx="12" cy="18.5" r="1.9" fill="currentColor"/></symbol>
+</defs></svg>
+
+<div id="bg">
+  <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+  <div class="grid"></div><div class="scan"></div><div class="vig"></div>
+</div>
+
+<div id="app">
+  <div id="top">
+    <div class="brandrow">
+      <div class="brand">DISPATCH</div>
+      <div class="lvlpill">LV<b id="plv">1</b><span class="xpbar"><i id="pxp" style="width:0%"></i></span></div>
+      <div class="brand-sub" id="clock">SECTOR ONLINE</div>
+    </div>
+    <div class="cur" id="cur"></div>
+  </div>
+  <div id="view"></div>
+  <div id="nav"></div>
+</div>
+
+<div id="toasts"></div>
+<div id="sheetwrap"><div id="sheetbg"></div><div id="sheet"></div></div>
+<div id="res"></div>
+<div id="intro"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   1. CONTENT DATA  (from the Dispatch Taxonomy & Content Bible)
+   ============================================================ */
+
+const RARITY = {
+  common:{n:"COMMON",c:"#95a0b3",w:100},
+  uncommon:{n:"UNCOMMON",c:"#34d399",w:52},
+  rare:{n:"RARE",c:"#38bdf8",w:24},
+  epic:{n:"EPIC",c:"#b06bff",w:9},
+  legendary:{n:"LEGENDARY",c:"#fbbf24",w:3},
+  mythic:{n:"MYTHIC",c:"#ff4d5e",w:0.8},
+  prototype:{n:"PROTOTYPE",c:"#ffffff",w:0.25}
+};
+
+const CLASSES = {
+  scout:{n:"SCOUT",c:"#22d3ee",bias:{mobility:16,intel:8,stealth:6,luck:4,cargo:-8,power:-6},
+    str:"Exploration / Information",wk:"Low cargo, low defense",ab:["Recon","Pathfinder","Cartographer","Deep Scan"]},
+  hacker:{n:"HACKER",c:"#4f8bff",bias:{tech:18,intel:12,stealth:5,power:-10,survival:-6},
+    str:"Security / Data / Corporate",wk:"Physical survival",ab:["Override","Data Theft","Backdoor","System Crash"]},
+  engineer:{n:"ENGINEER",c:"#fbbf24",bias:{tech:16,survival:10,power:5,mobility:-9},
+    str:"Equipment / Infrastructure",wk:"Low mobility",ab:["Repair","Reinforce","Overclock","Salvage"]},
+  smuggler:{n:"SMUGGLER",c:"#b06bff",bias:{cargo:18,stealth:10,luck:6,survival:-5,power:-4},
+    str:"Cargo / Black market",wk:"Higher failure chance",ab:["Hidden Cargo","Fake Identity","Black Market","Contraband"]},
+  soldier:{n:"SOLDIER",c:"#fb5c6c",bias:{power:18,survival:14,intel:-9,stealth:-7},
+    str:"Combat / Defense",wk:"Poor information",ab:["Shield","Assault","Guard","Last Stand"]},
+  spy:{n:"SPY",c:"#ff3ad4",bias:{stealth:18,intel:10,luck:4,cargo:-8,power:-4},
+    str:"PvP / Intelligence",wk:"Low direct rewards",ab:["Surveillance","Sabotage","Disguise","Counterintel"]},
+  pilot:{n:"PILOT",c:"#34d399",bias:{mobility:19,tech:6,cargo:5,survival:-6,stealth:-5},
+    str:"Transport / Time-sensitive",wk:"Poor static missions",ab:["Burn Run","Evasive","Slipstream","Hot Drop"]},
+  scientist:{n:"SCIENTIST",c:"#a78bfa",bias:{intel:19,tech:9,luck:5,power:-11,survival:-4},
+    str:"Research / Relics",wk:"High equipment needs",ab:["Analyze","Identify","Synthesize","Relic Sense"]},
+  merchant:{n:"MERCHANT",c:"#f59e0b",bias:{cargo:12,luck:9,intel:6,power:-8,survival:-4},
+    str:"Economy / Trading",wk:"Weak in combat",ab:["Haggle","Arbitrage","Supply Line","Insider Deal"]},
+  tracker:{n:"TRACKER",c:"#f97316",bias:{survival:12,mobility:9,intel:7,luck:5,tech:-8},
+    str:"Hunting / Rival missions",wk:"Poor standard missions",ab:["Trail","Bounty Sense","Ambush","Mark"]}
+};
+
+const STATS = ["power","intel","survival","mobility","stealth","cargo","luck","tech"];
+const STAT_N = {power:"POWER",intel:"INTEL",survival:"SURVIVAL",mobility:"MOBILITY",stealth:"STEALTH",cargo:"CARGO",luck:"LUCK",tech:"TECH"};
+
+const MAPS = [
+  {id:"neon",idx:"MAP 01",n:"NEON CITY",ac:"#22d3ee",ac2:"#ff3ad4",lv:1,
+   d:"Urban megacity controlled by competing corporations.",
+   sec:["Downtown","Industrial District","Old Metro","Financial Quarter","Rooftops","Neon Market","Corporate Tower","Underground","Harbor","Blackout Zone"],
+   mods:["+Urban crews","+Hacker effectiveness","High surveillance","High Intel","Medium reward"],
+   fav:["hacker","spy","merchant"],rw:1.0,rk:0,ev:"CITY BLACKOUT"},
+  {id:"waste",idx:"MAP 02",n:"THE WASTELAND",ac:"#fbbf24",ac2:"#f97316",lv:1,
+   d:"Desert territory containing abandoned military infrastructure.",
+   sec:["Dust Basin","Broken Highway","Missile Yard","Salt Flats","Old Research Station","Canyon","Dry River","Wreckage Field","Sandstorm","Forbidden Zone"],
+   mods:["+Scouts","+Survivalists","Durability matters","High volatility","High rewards"],
+   fav:["scout","tracker","soldier"],rw:1.25,rk:-4,ev:"SANDSTORM"},
+  {id:"frost",idx:"MAP 03",n:"FROSTLINE",ac:"#7dd3fc",ac2:"#4f8bff",lv:3,
+   d:"Frozen northern territory. Long travel, brittle equipment.",
+   sec:["Ice Port","Frozen Lake","Research Camp","Glacier","Mining Colony","Whiteout","Frozen Forest","Radio Station","Abandoned Base","Polar Vault"],
+   mods:["+Engineers","+Survival crews","Longer travel","Equipment failures","Rare loot up"],
+   fav:["engineer","scout","scientist"],rw:1.4,rk:-6,ev:"WHITEOUT"},
+  {id:"arch",idx:"MAP 04",n:"THE ARCHIPELAGO",ac:"#2dd4bf",ac2:"#22d3ee",lv:6,
+   d:"Hundreds of islands connected by contested sea routes.",
+   sec:["Smuggler's Bay","Coral Port","Pirate Island","Storm Belt","Lighthouse","Ship Graveyard","Jungle Island","Deep Water","Oil Platform","Lost Island"],
+   mods:["+Pilots","+Smugglers","+Navigation gear","Weather volatility","High cargo rewards"],
+   fav:["pilot","smuggler","merchant"],rw:1.6,rk:-6,ev:"STORM BELT"},
+  {id:"orbit",idx:"MAP 05",n:"ORBITAL",ac:"#a78bfa",ac2:"#4f8bff",lv:10,
+   d:"Low-orbit industrial infrastructure. Long missions, extreme payouts.",
+   sec:["Cargo Ring","Mining Station","Research Ring","Satellite Yard","Zero-G Lab","Docking Bay","Solar Array","Debris Field","Black Station","Deep Orbit"],
+   mods:["+Engineers","+Hackers","High gear requirement","Extreme rewards","Longer missions"],
+   fav:["engineer","hacker","pilot"],rw:2.0,rk:-9,ev:"SOLAR FLARE"},
+  {id:"under",idx:"MAP 06",n:"THE UNDERCITY",ac:"#f472b6",ac2:"#b06bff",lv:14,
+   d:"Massive underground civilization beneath Neon City.",
+   sec:["Sewer Network","Forgotten Station","Black Market","Reactor","Old Bunker","Smuggler Tunnel","Data Vault","Machine District","Deep Zone","Core"],
+   mods:["+Hackers","+Spies","+Smugglers","Information unreliable","High PvP"],
+   fav:["spy","smuggler","hacker"],rw:2.2,rk:-10,ev:"MARKET RAID"},
+  {id:"volc",idx:"MAP 07",n:"VOLCANIC BELT",ac:"#fb7185",ac2:"#f97316",lv:18,
+   d:"Active volcanic territory. Extreme risk, extreme reward.",
+   sec:["Ash Fields","Lava Channel","Mining Camp","Volcano Rim","Obsidian Mine","Magma Tunnel","Research Facility","Evacuation Zone","Firestorm","Core Chamber"],
+   mods:["Extreme risk","Extreme rewards","Protection is vital"],
+   fav:["soldier","engineer","tracker"],rw:2.7,rk:-14,ev:"FIRESTORM"},
+  {id:"ruins",idx:"MAP 08",n:"THE RUINS",ac:"#fcd34d",ac2:"#a78bfa",lv:22,
+   d:"Ancient civilization containing unexplained technology.",
+   sec:["Temple","Broken City","Observatory","Buried Vault","Ancient Road","Crystal Cavern","Machine Temple","Forbidden Library","Guardian Zone","The Gate"],
+   mods:["High relic probability","Unknown effects","Hidden missions","Mythic possible"],
+   fav:["scientist","scout","spy"],rw:3.0,rk:-13,ev:"RELIC SEASON"},
+  {id:"void",idx:"MAP 09",n:"THE VOID",ac:"#c084fc",ac2:"#4338ca",lv:28,
+   d:"Late-game region. Information becomes incomplete.",
+   sec:["Dark Sector","Silent Station","Gravity Well","Lost Fleet","Null Zone","Echo Field","Event Horizon","Unknown Structure","Dead Orbit","The Void"],
+   mods:["Incomplete information","Anomalous outcomes","Mythic rewards","Highest risk"],
+   fav:["scientist","spy","pilot"],rw:3.8,rk:-18,ev:"VOID BREACH"}
+];
+
+const CATS = {
+  exploration:{n:"EXPLORATION",w:{mobility:.3,intel:.25,survival:.2,luck:.25},fav:["scout","pilot","tracker"],
+    names:["Scout the Ruins","Map the Canyon","Investigate Signal","Explore the Vault","Locate Lost Station","Chart Dead Sector","Survey Perimeter"]},
+  cargo:{n:"CARGO",w:{cargo:.5,mobility:.25,survival:.25},fav:["smuggler","pilot","merchant"],
+    names:["Smuggle Cargo","Recover Shipment","Deliver Package","Steal Corporate Container","Transport Relic","Convoy Escort"]},
+  intelligence:{n:"INTELLIGENCE",w:{intel:.4,tech:.3,stealth:.3},fav:["hacker","spy","scientist"],
+    names:["Intercept Signal","Hack Terminal","Monitor Rival","Decode Message","Recover Database","Tap the Grid"]},
+  sabotage:{n:"SABOTAGE",w:{tech:.35,stealth:.35,power:.3},fav:["hacker","spy","engineer"],
+    names:["Disable Reactor","Corrupt Database","Destroy Supply","Jam Communications","Plant Device","Cut the Feed"]},
+  rescue:{n:"RESCUE",w:{survival:.35,mobility:.3,power:.35},fav:["soldier","pilot","engineer"],
+    names:["Rescue Scientist","Recover Scout","Extract Engineer","Evacuate Colony","Save Prisoner","Pull the Crew Out"]},
+  combat:{n:"COMBAT",w:{power:.5,survival:.3,mobility:.2},fav:["soldier","tracker","pilot"],
+    names:["Raid Camp","Defend Convoy","Attack Base","Intercept Squad","Capture Territory","Break the Line"]},
+  survival:{n:"SURVIVAL",w:{survival:.5,power:.2,luck:.3},fav:["soldier","scout","engineer"],
+    names:["Cross Sandstorm","Survive Whiteout","Escape Firestorm","Navigate Void","Endure Blackout","Hold Position"]},
+  research:{n:"RESEARCH",w:{intel:.45,tech:.35,luck:.2},fav:["scientist","engineer","hacker"],
+    names:["Study Artifact","Analyze Signal","Examine Relic","Test Prototype","Decode Ancient Device","Sample the Anomaly"]},
+  hunting:{n:"HUNTING",w:{mobility:.3,intel:.25,power:.25,stealth:.2},fav:["tracker","spy","soldier"],
+    names:["Hunt Rival","Track Smuggler","Find Bounty","Locate Rogue Crew","Capture Fugitive","Run the Mark Down"]},
+  trade:{n:"TRADE",w:{cargo:.35,luck:.3,intel:.35},fav:["merchant","smuggler","spy"],
+    names:["Buy Low","Sell Cargo","Arbitrage","Black Market Deal","Emergency Supply Run","Corner the Market"]}
+};
+
+const RISKS = [
+  {id:"safe",n:"SAFE",lo:75,hi:95,rl:1.1,rh:1.5,cost:1.0,xp:1.0},
+  {id:"standard",n:"STANDARD",lo:55,hi:80,rl:1.4,rh:2.2,cost:1.35,xp:1.5},
+  {id:"risky",n:"RISKY",lo:35,hi:60,rl:2.0,rh:4.0,cost:1.8,xp:2.4},
+  {id:"extreme",n:"EXTREME",lo:15,hi:40,rl:4.0,rh:8.0,cost:2.6,xp:4.0},
+  {id:"legendary",n:"LEGENDARY",lo:5,hi:25,rl:8.0,rh:20.0,cost:3.6,xp:7.0}
+];
+
+/* real-time durations, compressed for a playable prototype */
+const DURS = [
+  {id:"instant",n:"INSTANT",ms:10e3,label:"<1 min",cost:.5,rw:.55},
+  {id:"short",n:"SHORT",ms:45e3,label:"5-30 min",cost:1,rw:1},
+  {id:"medium",n:"MEDIUM",ms:150e3,label:"30m-3h",cost:1.7,rw:1.9},
+  {id:"long",n:"LONG",ms:360e3,label:"3-12h",cost:2.6,rw:3.2},
+  {id:"exped",n:"EXPEDITION",ms:720e3,label:"12-24h",cost:3.8,rw:5.0},
+  {id:"epic",n:"EPIC EXPEDITION",ms:1500e3,label:"24-72h",cost:5.4,rw:7.6}
+];
+
+const MODS = {
+  pos:[["Clear Weather",5],["Local Support",7],["Hidden Route",6],["Insider Information",8],["Full Supplies",5],
+       ["Quiet Zone",6],["Weak Security",9],["Bonus Cargo",0,1.25],["Lucky Window",4,1.15]],
+  neg:[["Storm",-7],["Security Alert",-9],["Rival Nearby",-6],["Equipment Failure",-8],["Ambush Risk",-7],
+       ["Communication Loss",-5],["Heavy Surveillance",-8],["Low Supplies",-6],["Time Pressure",-5]],
+  rare:[["Double Reward",0,2.0],["Unknown Anomaly",-3,1.4],["Temporal Distortion",0,1.3],["False Information",-12],
+        ["Hidden Treasure",0,1.6],["Rogue AI",-10,1.8],["Mass Blackout",6,1.2],["Reality Shift",-8,2.2]]
+};
+
+const TRAITS = {
+  pos:[["Lucky",{luck:9}],["Fast",{mobility:8}],["Silent",{stealth:8}],["Resourceful",{tech:7,luck:4}],
+       ["Veteran",{power:6,survival:6}],["Fearless",{power:9}],["Analytical",{intel:9}],["Opportunist",{cargo:6,luck:5}],
+       ["Mechanic",{tech:9}],["Survivor",{survival:10}],["Charismatic",{intel:5,luck:5}],["Explorer",{mobility:6,intel:5}]],
+  neg:[["Reckless",{survival:-8}],["Slow",{mobility:-9}],["Noisy",{stealth:-9}],["Greedy",{luck:-7}],
+       ["Fragile",{survival:-10}],["Paranoid",{intel:-6}],["Impulsive",{tech:-7}],["Unreliable",{luck:-9}]],
+  rare:[["Impossible Luck",{luck:20}],["Ghost",{stealth:18}],["Natural Leader",{power:8,intel:8,survival:8}],
+        ["Mastermind",{intel:16,tech:10}],["Survivor of the Void",{survival:16,luck:8}],["Relic Affinity",{intel:10,luck:12}]]
+};
+
+const ADDONS = [
+  {id:"scanner",n:"Scanner",r:"common",ic:"i-eye",e:"+Information",st:{intel:6}},
+  {id:"lrscanner",n:"Long Range Scanner",r:"rare",ic:"i-eye",e:"++Information",st:{intel:14}},
+  {id:"shieldgen",n:"Shield Generator",r:"uncommon",ic:"i-gear",e:"+Survival",st:{survival:9}},
+  {id:"emshield",n:"Emergency Shield",r:"epic",ic:"i-gear",e:"Prevents one catastrophic failure",st:{survival:6},sp:"nocrit"},
+  {id:"cargoexp",n:"Cargo Expander",r:"common",ic:"i-cube",e:"+Cargo reward",st:{cargo:10}},
+  {id:"stealthmod",n:"Stealth Module",r:"uncommon",ic:"i-signal",e:"+Stealth",st:{stealth:10}},
+  {id:"neural",n:"Neural Interface",r:"rare",ic:"i-bolt",e:"+Intelligence",st:{intel:12,tech:5}},
+  {id:"turbo",n:"Turbo Drive",r:"uncommon",ic:"i-clock",e:"-20% mission duration",st:{mobility:6},sp:"spd20"},
+  {id:"quantum",n:"Quantum Drive",r:"epic",ic:"i-clock",e:"-40% mission duration",st:{mobility:11},sp:"spd40"},
+  {id:"blackbox",n:"Black Box",r:"uncommon",ic:"i-cube",e:"Extra post-mission information",st:{intel:4},sp:"blackbox"},
+  {id:"decoy",n:"Decoy Beacon",r:"common",ic:"i-signal",e:"Reduces rival interference",st:{stealth:5}},
+  {id:"jammer",n:"Signal Jammer",r:"rare",ic:"i-signal",e:"Reduces enemy detection",st:{stealth:12}},
+  {id:"autorep",n:"Auto-Repair",r:"uncommon",ic:"i-gear",e:"Chance to repair damaged equipment",st:{tech:8}},
+  {id:"fortune",n:"Fortune Chip",r:"rare",ic:"i-star",e:"+Favorable random events",st:{luck:13}},
+  {id:"exoframe",n:"Exo Frame",r:"rare",ic:"i-gear",e:"+Power, +Survival",st:{power:11,survival:7}},
+  {id:"gravboots",n:"Grav Boots",r:"uncommon",ic:"i-bolt",e:"+Mobility",st:{mobility:10}},
+  {id:"toolrig",n:"Field Tool Rig",r:"common",ic:"i-gear",e:"+Technical",st:{tech:7}},
+  {id:"ghostsig",n:"Ghost Signal",r:"epic",ic:"i-signal",e:"Untraceable while deployed",st:{stealth:16}},
+  {id:"stormscan",n:"Storm Scanner",r:"rare",ic:"i-eye",e:"Weather no longer penalizes",st:{intel:7,survival:7}},
+  {id:"cryorig",n:"Cryo Rig",r:"uncommon",ic:"i-flask",e:"+Survival in cold sectors",st:{survival:11}}
+];
+
+const CONSUM = [
+  {id:"overdrive",n:"Overdrive",r:"uncommon",ic:"i-bolt",e:"+12% success, higher volatility",ch:12,vol:1},
+  {id:"insurance",n:"Insurance",r:"common",ic:"i-gear",e:"Recover 60% of entry cost on failure",sp:"insure"},
+  {id:"intelc",n:"Intel",r:"common",ic:"i-eye",e:"Reveal one hidden modifier",sp:"reveal"},
+  {id:"dcargo",n:"Double Cargo",r:"rare",ic:"i-cube",e:"+80% Ops on success",sp:"dbl"},
+  {id:"fuel",n:"Emergency Fuel",r:"common",ic:"i-clock",e:"-35% mission duration",sp:"spd35"},
+  {id:"ghost",n:"Ghost Mode",r:"uncommon",ic:"i-signal",e:"Hide mission from rivals",ch:3},
+  {id:"second",n:"Second Chance",r:"epic",ic:"i-star",e:"Auto-retry once after failure",sp:"retry"},
+  {id:"charm",n:"Lucky Charm",r:"uncommon",ic:"i-star",e:"+8% success, better rare rolls",ch:8},
+  {id:"repair",n:"Repair Kit",r:"common",ic:"i-gear",e:"Restore damaged equipment",ch:2},
+  {id:"bmpass",n:"Black Market Pass",r:"rare",ic:"i-key",e:"Unlock one black-market mission",sp:"bm"},
+  {id:"oracle",n:"Oracle",r:"epic",ic:"i-eye",e:"Reveal exact outcome range",sp:"oracle"},
+  {id:"sabshield",n:"Sabotage Shield",r:"uncommon",ic:"i-gear",e:"Protects against rival interference",ch:4}
+];
+
+const ARTIFACTS = [
+  {id:"phoenix",n:"Phoenix Core",r:"legendary",ic:"i-relic",e:"Once per run a catastrophic failure becomes a normal failure",st:{survival:12},sp:"nocrit"},
+  {id:"ghosteng",n:"Ghost Engine",r:"legendary",ic:"i-relic",e:"The crew cannot be detected by standard surveillance",st:{stealth:20}},
+  {id:"oracleeye",n:"Oracle Eye",r:"legendary",ic:"i-relic",e:"Unusually accurate mission forecasting",st:{intel:18},sp:"oracle"},
+  {id:"voidcomp",n:"Void Compass",r:"mythic",ic:"i-relic",e:"Unlocks Void missions",st:{luck:14,intel:10}},
+  {id:"blackcrown",n:"Black Crown",r:"legendary",ic:"i-relic",e:"Increased rewards against stronger opponents",st:{power:16}},
+  {id:"timeshard",n:"Time Shard",r:"legendary",ic:"i-relic",e:"Dramatically reduces mission duration",st:{mobility:14},sp:"spd50"},
+  {id:"emperorkey",n:"Emperor's Key",r:"mythic",ic:"i-key",e:"Unlocks sealed vaults",st:{luck:16}},
+  {id:"mirror",n:"Mirror Chip",r:"epic",ic:"i-relic",e:"Copies one temporary enemy modifier",st:{tech:14}},
+  {id:"singular",n:"Singularity Core",r:"mythic",ic:"i-relic",e:"Extremely high risk, extremely high reward",st:{power:14,luck:14},sp:"singular"},
+  {id:"ancheart",n:"Ancient Heart",r:"legendary",ic:"i-relic",e:"Greatly improves relic discovery",st:{intel:12,luck:12}}
+];
+
+const SYNERGIES = [
+  {n:"NIGHT STALKER",req:["stealthmod","ghostsig"],cls:"scout",e:"+35% night mission performance",b:12},
+  {n:"IRON WALL",req:["shieldgen","emshield"],cls:"soldier",e:"Greatly reduced catastrophic failure",b:10},
+  {n:"DATA GHOST",req:["neural","ghosteng"],cls:"hacker",e:"Elite intel work while staying hidden",b:14},
+  {n:"STORM RUNNER",req:["turbo","stormscan"],cls:"pilot",e:"Bonus performance during weather events",b:12},
+  {n:"RELIC HUNTER",req:["ancheart","lrscanner"],cls:"scientist",e:"Large increase in relic discovery",b:13}
+];
+
+const FACTIONS = [
+  {id:"helix",n:"HELIX CORPORATION",c:"#4f8bff",f:"Technology",m:["intelligence","research","sabotage"]},
+  {id:"iron",n:"IRON SYNDICATE",c:"#fb5c6c",f:"Military",m:["combat","rescue","survival"]},
+  {id:"black",n:"BLACK MARKET",c:"#b06bff",f:"Smuggling",m:["cargo","trade","hunting"]},
+  {id:"free",n:"FREE RUNNERS",c:"#34d399",f:"Exploration",m:["exploration","cargo","survival"]},
+  {id:"order",n:"THE ORDER",c:"#fbbf24",f:"Ancient technology",m:["research","exploration"]},
+  {id:"null",n:"NULL",c:"#c084fc",f:"Unknown",m:["sabotage","research","hunting"]}
+];
+const REP_LV = ["Unknown","Contact","Associate","Trusted","Specialist","Insider","Elite","Champion","Legend"];
+
+const STARTERS = [
+  {id:"rex",n:"REX",cls:"soldier",role:"Balanced defensive crew. Absorbs bad outcomes.",ab:"LAST STAND - converts a catastrophic failure into a normal failure",sp:"nocrit"},
+  {id:"nova",n:"NOVA",cls:"scout",role:"Information-focused. Sees more before launch.",ab:"FIRST LOOK - reveals one additional mission modifier",sp:"reveal"},
+  {id:"byte",n:"BYTE",cls:"hacker",role:"Technical specialist. Breaks hostile systems.",ab:"OVERRIDE - chance to disable a negative modifier",sp:"override"}
+];
+
+const NAMES = ["CIPHER","VESPER","KOJI","MARLOW","SABLE","QUILL","ORION","RAVEN","DRIFT","AXIOM","HOLLOW","LUMEN",
+  "TALON","ECHO","JUNO","PRIME","WRAITH","SOLAS","FLINT","NYX","CASK","VECTOR","MIRA","OBSIDIAN","HALO","RUST"];
+
+const RIVAL_NAMES = ["K4RMA","SILENTFOX","DEADSIGNAL","MR_NULL","VIPERLINE","ZEROCOUNT","HALCYON","BLACKOUT_9","GRIMTIDE","ONYX"];
+const TITLES = ["The Scout","The Oracle","The Smuggler","The Ghost","The Survivor","The Riskmaster","The Strategist","The Hunter","The Collector","The Architect","The Voidwalker","The Legend"];
+
+const SECRETS = ["THE LOST TRAIN","THE SILENT VAULT","PROJECT ZERO","THE LAST SIGNAL","THE EMPTY SHIP","DOOR 17","THE OBSERVER","THE VOID CALLS"];
+
+const OUTCOMES = {
+  perfect:{n:"PERFECT SUCCESS",c:"#34d399",ic:"i-star",f:1.65,xp:1.6,t:"Flawless run."},
+  jackpot:{n:"JACKPOT EVENT",c:"#fbbf24",ic:"i-star",f:3.2,xp:2.2,t:"Something went unexpectedly right."},
+  discovery:{n:"DISCOVERY",c:"#a78bfa",ic:"i-relic",f:1.2,xp:1.8,t:"The crew found something that was not on the map."},
+  success:{n:"SUCCESS",c:"#22d3ee",ic:"i-check",f:1.0,xp:1.0,t:"Objective completed. Crew extracted."},
+  partial:{n:"PARTIAL SUCCESS",c:"#38bdf8",ic:"i-alert",f:.45,xp:.6,t:"Objective reached, but not intact."},
+  anomaly:{n:"ANOMALY",c:"#c084fc",ic:"i-relic",f:1.4,xp:1.5,t:"The recorded outcome does not match the mission."},
+  ambush:{n:"AMBUSH",c:"#ff3ad4",ic:"i-skull",f:.3,xp:.8,t:"Another operator was waiting for your crew."},
+  failure:{n:"FAILURE",c:"#fb5c6c",ic:"i-x",f:0,xp:.35,t:"Mission lost. Entry cost gone."},
+  critical:{n:"CRITICAL FAILURE",c:"#ff2e63",ic:"i-skull",f:-.3,xp:.2,t:"Heavy losses. Equipment damaged."}
+};
+
+/* ============================================================
+   2. UTILITIES
+   ============================================================ */
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>[...(r||document).querySelectorAll(s)];
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const fmt=n=>{n=Math.round(n);return n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e4?(n/1e3).toFixed(1)+"k":n.toLocaleString("en-US")};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
+function wpick(list,wf){let t=0;for(const x of list)t+=wf(x);let r=Math.random()*t;for(const x of list){r-=wf(x);if(r<=0)return x}return list[list.length-1]}
+function ago(t){const s=Math.floor((Date.now()-t)/1000);if(s<60)return s+"s ago";if(s<3600)return Math.floor(s/60)+"m ago";return Math.floor(s/3600)+"h ago"}
+function mmss(ms){ms=Math.max(0,ms);const s=Math.ceil(ms/1000);const m=Math.floor(s/60);const r=s%60;return m+":"+String(r).padStart(2,"0")}
+const ITEM=id=>ADDONS.find(x=>x.id===id)||ARTIFACTS.find(x=>x.id===id)||CONSUM.find(x=>x.id===id);
+const MAP=id=>MAPS.find(m=>m.id===id);
+
+/* deterministic tiny hash for procedural portraits */
+function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+
+/* ============================================================
+   3. PROCEDURAL CREW PORTRAIT
+   ============================================================ */
+function portrait(seed,cls){
+  const h=hash(seed), c=CLASSES[cls].c;
+  const a=(h&7), b=(h>>3&7), d=(h>>6&3), e=(h>>8&7);
+  const eyeY=30+ (h>>11&5);
+  const visor=["M18 30h28v9a6 6 0 0 1-6 6H24a6 6 0 0 1-6-6z","M16 28h32v6H16z M20 36h24v8H20z","M18 27l28 3v10l-28 3z"][d%3];
+  return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="g${h%9999}" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="${c}" stop-opacity=".55"/><stop offset="1" stop-color="#060a12" stop-opacity=".95"/></linearGradient></defs>
+  <rect width="64" height="64" fill="#080d18"/><rect width="64" height="64" fill="url(#g${h%9999})"/>
+  <g opacity=".28" stroke="${c}" stroke-width=".6">
+    ${Array.from({length:5},(_,i)=>`<line x1="0" y1="${8+i*12+a}" x2="64" y2="${8+i*12+a}"/>`).join("")}
+  </g>
+  <path d="M32 8c11 0 17 7 17 17v10c0 12-7 21-17 21s-17-9-17-21V25c0-10 6-17 17-17z" fill="#0b1220" stroke="${c}" stroke-width="1.4" opacity=".92"/>
+  <path d="${visor}" fill="${c}" opacity=".82" transform="translate(0,${eyeY-30})"/>
+  <circle cx="${24+ (b%3)}" cy="${eyeY+4}" r="1.9" fill="#fff" opacity=".95"/>
+  <circle cx="${40- (b%3)}" cy="${eyeY+4}" r="1.9" fill="#fff" opacity=".95"/>
+  <path d="M${20+e} 50h${24-e*2}" stroke="${c}" stroke-width="1.2" opacity=".5"/>
+  <path d="M15 25 L8 22 M49 25 L56 22" stroke="${c}" stroke-width="1.2" opacity=".6"/>
+  <rect x="0" y="0" width="64" height="64" fill="none" stroke="${c}" stroke-opacity=".35"/>
+  </svg>`;
+}
+
+/* ============================================================
+   4. STATE
+   ============================================================ */
+const SAVE_KEY="dispatch_save_v1";
+let S=null;
+const NEED_XP=lv=>Math.round(180*Math.pow(lv,1.28));
+const CREW_NEED=lv=>Math.round(55*Math.pow(lv,1.32));
+const SLOTS=lv=>lv>=100?7:lv>=75?6:lv>=50?5:lv>=25?4:lv>=10?3:2;
+const EQ_SLOTS=lv=>lv>=40?6:lv>=25?4:lv>=10?3:2;
+
+function newCrew(cls,lv,name,sp){
+  const C=CLASSES[cls], st={};
+  STATS.forEach(k=>{ st[k]=clamp(Math.round(rnd(26,44)+(C.bias[k]||0)+lv*1.3),5,100) });
+  const tr=[];
+  tr.push(pick(TRAITS.pos)[0]);
+  if(Math.random()<.45) tr.push(pick(TRAITS.pos)[0]);
+  if(Math.random()<.5) tr.push(pick(TRAITS.neg)[0]);
+  if(Math.random()<.07) tr.push(pick(TRAITS.rare)[0]);
+  return {id:uid(),n:name||pick(NAMES),cls,lv,xp:0,st,tr:[...new Set(tr)],eq:[],sp:sp||null,
+    runs:0,wins:0,born:Date.now()};
+}
+function traitMod(c,stat){
+  let m=0;
+  for(const t of c.tr){
+    for(const g of [TRAITS.pos,TRAITS.neg,TRAITS.rare]){
+      const f=g.find(x=>x[0]===t); if(f&&f[1][stat]) m+=f[1][stat];
+    }
+  }
+  return m;
+}
+function gearMod(c,stat){let m=0;for(const id of c.eq){const it=ITEM(id);if(it&&it.st&&it.st[stat])m+=it.st[stat]}return m}
+function stat(c,k){return clamp(Math.round(c.st[k]+traitMod(c,k)+gearMod(c,k)),1,140)}
+function crewRank(c){return STATS.reduce((a,k)=>a+stat(c,k),0)/STATS.length}
+function crewSyn(c){return SYNERGIES.filter(s=>(!s.cls||s.cls===c.cls)&&s.req.every(r=>c.eq.includes(r)))}
+
+function freshState(starter){
+  const st={
+    v:1,name:"OPERATOR",title:pick(TITLES),lv:1,xp:0,
+    ops:520,scrap:60,intel:3,keys:1,
+    crews:[],inv:[],consum:{intelc:2,overdrive:1,insurance:1,fuel:1},
+    active:[],log:[],miss:{},disc:{},rep:{},rivals:[],
+    daily:{day:today(),objs:[]},week:{score:0},
+    stat:{runs:0,wins:0,streak:0,best:0,perfect:0,crit:0,found:0},
+    seen:{},pending:0
+  };
+  FACTIONS.forEach(f=>st.rep[f.id]=0);
+  const s=STARTERS.find(x=>x.id===starter);
+  st.crews.push(newCrew(s.cls,3,s.n,s.sp));
+  st.crews.push(newCrew(pick(["scout","engineer","smuggler","pilot"]),1));
+  MAPS.slice(0,2).forEach(m=>st.disc[m.id]=[0,1,2]);
+  st.disc.frost=[0];
+  st.inv=[{u:uid(),id:"scanner"},{u:uid(),id:"cargoexp"},{u:uid(),id:"toolrig"}];
+  st.rivals=RIVAL_NAMES.slice(0,6).map((n,i)=>({n,score:ri(180,900),lv:ri(2,9),hot:false,tag:pick(TITLES)}));
+  st.daily.objs=rollDaily();
+  return st;
+}
+function today(){const d=new Date();return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate()}
+function save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
+function load(){try{const r=localStorage.getItem(SAVE_KEY);if(!r)return null;const o=JSON.parse(r);return o&&o.v===1?o:null}catch(e){return null}}
+
+/* ============================================================
+   5. DAILY OBJECTIVES
+   ============================================================ */
+const DAILY_POOL=[
+  {k:"runs",n:"Complete 2 missions",g:2,rw:{ops:120,scrap:10}},
+  {k:"wins",n:"Win 2 missions",g:2,rw:{ops:150,intel:1}},
+  {k:"risky",n:"Win one risky mission",g:1,rw:{ops:220,keys:1}},
+  {k:"disc",n:"Discover one new sector",g:1,rw:{ops:180,intel:1}},
+  {k:"pow",n:"Use a power-up",g:1,rw:{ops:90,scrap:15}},
+  {k:"ops",n:"Earn 400 Ops",g:400,rw:{ops:200,scrap:20}},
+  {k:"fac",n:"Complete a faction mission",g:1,rw:{ops:160,intel:1}},
+  {k:"rival",n:"Beat a rival's score",g:1,rw:{ops:260,keys:1}}
+];
+function rollDaily(){
+  const p=[...DAILY_POOL].sort(()=>Math.random()-.5).slice(0,3);
+  return p.map(o=>({...o,p:0,claimed:false}));
+}
+function trackObj(k,amt){
+  if(!S.daily||!S.daily.objs)return;
+  let changed=false;
+  S.daily.objs.forEach(o=>{ if(o.k===k&&o.p<o.g){o.p=Math.min(o.g,o.p+(amt||1));changed=true;
+    if(o.p>=o.g) toast("OBJECTIVE","Daily objective complete: "+o.n,"#34d399","i-check");} });
+  if(changed) save();
+}
+
+/* ============================================================
+   6. MISSION GENERATION
+   ============================================================ */
+function secKey(m,i){return m+":"+i}
+function isDisc(m,i){return (S.disc[m]||[]).includes(i)}
+
+function genMission(mapId,sec){
+  const M=MAP(mapId);
+  const depth=sec/9;
+  const catId=pick(Object.keys(CATS)), C=CATS[catId];
+  let riskI=wpick([0,1,2,3,4],i=>[42,34,18,7,2.4][i]*(1+depth*i*.55));
+  const R=RISKS[riskI];
+  const D=wpick(DURS,d=>({instant:16,short:34,medium:26,long:14,exped:7,epic:3})[d.id]);
+  const mods=[];
+  const nmod=ri(1,3);
+  for(let i=0;i<nmod;i++){
+    const r=Math.random();
+    const src = r<.10 ? "rare" : (r<.52 ? "pos":"neg");
+    const raw=pick(MODS[src]);
+    if(mods.some(x=>x.n===raw[0]))continue;
+    mods.push({n:raw[0],d:raw[1]||0,rw:raw[2]||1,t:src,hidden:Math.random()<(mapId==="void"?.62:.42)});
+  }
+  const fac=Math.random()<.5?pick(FACTIONS.filter(f=>f.m.includes(catId)))||null:null;
+  const secret=Math.random()<.05;
+  const base=Math.round((34+sec*7+riskI*26)*(1+S.lv*.055));
+  const cost=Math.max(20,Math.round(base*R.cost*D.cost*rnd(.9,1.12)));
+  return {
+    id:uid(),map:mapId,sec,cat:catId,risk:R.id,dur:D.id,
+    n: secret?pick(SECRETS):pick(C.names),
+    secret, fac:fac?fac.id:null, mods, cost,
+    rwMul: rnd(R.rl,R.rh)*D.rw*M.rw,
+    born:Date.now()
+  };
+}
+function missionsFor(mapId,sec){
+  const k=secKey(mapId,sec);
+  const slot=S.miss[k];
+  if(!slot||Date.now()-slot.t>8*60e3||slot.list.length<2){
+    const n=ri(3,5);
+    S.miss[k]={t:Date.now(),list:Array.from({length:n},()=>genMission(mapId,sec))};
+    save();
+  }
+  return S.miss[k].list;
+}
+function dropMission(m){
+  const k=secKey(m.map,m.sec), slot=S.miss[k];
+  if(slot) slot.list=slot.list.filter(x=>x.id!==m.id);
+}
+
+/* ============================================================
+   7. FORECAST  (crew + gear + modifiers -> success chance)
+   ============================================================ */
+function forecast(m,crew,cons){
+  cons=cons||[];
+  const C=CATS[m.cat], R=RISKS.findIndex(r=>r.id===m.risk), RK=RISKS[R], M=MAP(m.map);
+  let score=0;
+  for(const k in C.w) score+=stat(crew,k)*C.w[k];
+  const parts=[];
+  let base=RK.lo+(RK.hi-RK.lo)*clamp(score/78,0,1.12);
+  parts.push({k:"Crew aptitude",v:Math.round(base-RK.lo),p:true});
+  let chance=base;
+  if(C.fav.includes(crew.cls)){chance+=8;parts.push({k:"Class specialisation",v:8,p:true})}
+  if(M.fav.includes(crew.cls)){chance+=6;parts.push({k:"Map affinity",v:6,p:true})}
+  chance+=M.rk; if(M.rk) parts.push({k:M.n+" conditions",v:M.rk,p:M.rk>0});
+  let rw=1;
+  for(const md of m.mods){
+    if(md.hidden&&!cons.includes("intelc")&&crew.sp!=="reveal"&&!crew.eq.includes("oracleeye")) continue;
+    let d=md.d;
+    if(crew.sp==="override"&&d<0&&(hash(m.id+md.n)%2===0)) d=0;
+    chance+=d; rw*=md.rw;
+    if(d) parts.push({k:md.n,v:d,p:d>0});
+  }
+  const syn=crewSyn(crew);
+  syn.forEach(s=>{chance+=s.b;parts.push({k:"SYNERGY "+s.n,v:s.b,p:true})});
+  cons.forEach(id=>{const c=CONSUM.find(x=>x.id===id);if(c&&c.ch){chance+=c.ch;parts.push({k:c.n,v:c.ch,p:true})}});
+  const lb=Math.round(clamp(crewRank(crew)/14,0,7));
+  chance+=lb; if(lb) parts.push({k:"Veteran crew",v:lb,p:true});
+  chance=clamp(chance,3,97);
+  let reward=m.cost*m.rwMul*rw;
+  if(cons.includes("dbl")) reward*=1.8;
+  if(crew.eq.includes("cargoexp")) reward*=1.1;
+  if(crew.cls==="merchant") reward*=1.12;
+  if(crew.cls==="smuggler") reward*=1.18;
+  return {chance:Math.round(chance),reward:Math.round(reward),parts,syn,rw,
+    band:Math.max(3,Math.round(12-crewRank(crew)/12 + (m.map==="void"?7:0) - (cons.includes("oracle")?9:0)))};
+}
+function durMs(m,crew,cons){
+  const D=DURS.find(d=>d.id===m.dur);
+  let ms=D.ms;
+  const sp=[...crew.eq,...(cons||[])].map(id=>{const it=ITEM(id);return it&&it.sp}).filter(Boolean);
+  if(sp.includes("spd50"))ms*=.5; else if(sp.includes("spd40"))ms*=.6; else if(sp.includes("spd35"))ms*=.65; else if(sp.includes("spd20"))ms*=.8;
+  if(crew.cls==="pilot")ms*=.85;
+  if(MAP(m.map).id==="frost"||MAP(m.map).id==="orbit")ms*=1.15;
+  return Math.round(ms);
+}
+
+/* ============================================================
+   8. LAUNCH + RESOLVE
+   ============================================================ */
+function launch(m,crew,cons){
+  const f=forecast(m,crew,cons);
+  if(S.ops<m.cost){toast("DENIED","Not enough Ops for this contract.","#fb5c6c","i-alert");return false}
+  if(S.active.length>=SLOTS(S.lv)){toast("NO SLOT","All mission slots are active.","#fbbf24","i-alert");return false}
+  S.ops-=m.cost;
+  cons.forEach(id=>{S.consum[id]=(S.consum[id]||1)-1;if(S.consum[id]<=0)delete S.consum[id]});
+  if(cons.length) trackObj("pow",1);
+  const ms=durMs(m,crew,cons);
+  S.active.push({a:uid(),m,crewId:crew.id,cons,start:Date.now(),ms,chance:f.chance,reward:f.reward,done:false});
+  dropMission(m);
+  crew.runs++;
+  bumpCur("ops");
+  buzz(18);
+  save(); render();
+  return true;
+}
+
+function rollOutcome(A,crew){
+  const noise=rnd(-5,5);
+  const eff=clamp(A.chance+noise,2,98);
+  const roll=rnd(0,100);
+  const vol=A.cons.includes("overdrive")?1.35:1;
+  let k;
+  if(roll<=eff){
+    const margin=eff-roll;
+    if(margin>44&&Math.random()<.34) k="perfect";
+    else if(Math.random()<.035*vol) k="jackpot";
+    else if(Math.random()<.075+(crew.cls==="scout"?.05:0)) k="discovery";
+    else k="success";
+  }else{
+    const over=roll-eff;
+    if(over<11) k="partial";
+    else if(over>36&&Math.random()<.34*vol) k="critical";
+    else k="failure";
+    if(Math.random()<.09) k="ambush";
+  }
+  if((A.m.map==="void"||A.m.map==="ruins")&&Math.random()<.09) k="anomaly";
+  const protect=crew.sp==="nocrit"||crew.eq.some(id=>{const i=ITEM(id);return i&&i.sp==="nocrit"})
+    ||crewSyn(crew).some(s=>s.n==="IRON WALL");
+  if(k==="critical"&&protect) k="failure";
+  if((k==="failure"||k==="critical")&&A.cons.includes("retry")&&Math.random()<.6) k="partial";
+  return k;
+}
+
+function resolve(A){
+  const crew=S.crews.find(c=>c.id===A.crewId)||newCrew("scout",1,"GHOST");
+  const k=rollOutcome(A,crew), O=OUTCOMES[k];
+  const R=RISKS.find(r=>r.id===A.m.risk);
+  const rw={ops:0,scrap:0,intel:0,keys:0,xp:0,items:[],sector:null,note:""};
+  const win=["perfect","jackpot","discovery","success","partial","anomaly"].includes(k);
+
+  rw.ops=Math.round(A.reward*O.f);
+  if(k==="failure"&&A.cons.includes("insure")) {rw.ops=Math.round(A.m.cost*.6);rw.note="Insurance recovered part of the entry cost."}
+  if(k==="critical") rw.ops=Math.round(-A.m.cost*.3);
+  rw.xp=Math.round(24*R.xp*O.xp*(1+A.m.sec*.06));
+  rw.scrap=win?Math.round(rnd(4,16)*R.xp*O.xp):Math.round(rnd(0,4));
+  if(win&&Math.random()<.22+R.xp*.04) rw.intel=ri(1,2);
+  if(win&&Math.random()<.05+R.xp*.02) rw.keys=1;
+
+  // loot
+  const lootChance={safe:.16,standard:.26,risky:.4,extreme:.62,legendary:.9}[A.m.risk]*(win?1:.15)
+    *(A.cons.includes("charm")?1.35:1)*(crew.cls==="scientist"?1.2:1);
+  if(Math.random()<lootChance){
+    const tierBoost={safe:1,standard:1.3,risky:2.1,extreme:3.4,legendary:6}[A.m.risk];
+    const pool=[...ADDONS,...(A.m.risk==="extreme"||A.m.risk==="legendary"?ARTIFACTS:[])];
+    const it=wpick(pool,x=>RARITY[x.r].w*(x.r==="common"?1:tierBoost));
+    rw.items.push(it.id);
+  }
+  if(k==="jackpot") {rw.items.push(wpick(ADDONS,x=>RARITY[x.r].w*3).id); rw.keys+=1}
+  if(k==="discovery"){
+    const M=MAP(A.m.map), have=S.disc[A.m.map]||[];
+    const un=M.sec.map((_,i)=>i).filter(i=>!have.includes(i));
+    if(un.length){const s=pick(un);(S.disc[A.m.map]=have).push(s);rw.sector=M.sec[s];S.stat.found++;trackObj("disc",1)}
+    else rw.items.push(wpick(ADDONS,x=>RARITY[x.r].w).id);
+  }
+  if(k==="anomaly"){
+    const eff=pick(["Temporal echo: Ops doubled.","Signal ghost: crew XP doubled.","Null residue: recovered a Key.","Reality shift: extra Intel."]);
+    rw.note=eff;
+    if(eff.startsWith("Temporal"))rw.ops*=2;
+    if(eff.startsWith("Signal"))rw.xp*=2;
+    if(eff.startsWith("Null"))rw.keys+=1;
+    if(eff.startsWith("Reality"))rw.intel+=2;
+  }
+  if(k==="ambush"){
+    const r=pick(S.rivals); r.score+=ri(40,120); r.hot=true;
+    rw.note=r.n+" intercepted the run and took the payload.";
+  }
+  if(A.cons.includes("bm")) rw.ops=Math.round(rw.ops*1.25);
+
+  // consumable drop
+  if(win&&Math.random()<.2){const c=wpick(CONSUM,x=>RARITY[x.r].w);S.consum[c.id]=(S.consum[c.id]||0)+1;rw.note=rw.note||("Recovered a "+c.n+".")}
+
+  // apply
+  S.ops=Math.max(0,S.ops+rw.ops);
+  S.scrap+=rw.scrap; S.intel+=rw.intel; S.keys+=rw.keys;
+  rw.items.forEach(id=>S.inv.push({u:uid(),id}));
+  const lvUps=addXP(rw.xp), cUp=addCrewXP(crew,Math.round(rw.xp*1.1));
+  if(A.m.fac) S.rep[A.m.fac]=(S.rep[A.m.fac]||0)+(win?ri(6,14):2);
+
+  // stats + objectives
+  S.stat.runs++; trackObj("runs",1);
+  if(win){S.stat.wins++;S.stat.streak++;S.stat.best=Math.max(S.stat.best,S.stat.streak);crew.wins++;trackObj("wins",1);
+    if(A.m.risk==="risky"||A.m.risk==="extreme"||A.m.risk==="legendary")trackObj("risky",1);
+    if(A.m.fac)trackObj("fac",1);
+    trackObj("ops",Math.max(0,rw.ops));
+    S.week.score+=Math.round(rw.ops*.35+R.xp*22);
+  } else S.stat.streak=0;
+  if(k==="perfect")S.stat.perfect++;
+  if(k==="critical")S.stat.crit++;
+
+  // rival simulation
+  tickRivals(win?rw.ops:0);
+
+  S.active=S.active.filter(x=>x.a!==A.a);
+  logAdd(k,A,rw,crew);
+  save();
+  return {k,O,rw,crew,A,lvUps,cUp};
+}
+
+function addXP(x){
+  S.xp+=x; let ups=0;
+  while(S.xp>=NEED_XP(S.lv)&&S.lv<100){S.xp-=NEED_XP(S.lv);S.lv++;ups++}
+  return ups;
+}
+function addCrewXP(c,x){
+  c.xp+=x; let ups=0;
+  while(c.xp>=CREW_NEED(c.lv)&&c.lv<50){
+    c.xp-=CREW_NEED(c.lv);c.lv++;ups++;
+    const gain=[...STATS].sort(()=>Math.random()-.5).slice(0,3);
+    gain.forEach(k=>c.st[k]=clamp(c.st[k]+ri(1,3),1,100));
+  }
+  return ups;
+}
+function logAdd(k,A,rw,crew){
+  const O=OUTCOMES[k];
+  S.log.unshift({t:Date.now(),c:O.c,x:`<b>${esc(crew.n)}</b> ${k==="failure"||k==="critical"?"lost":"finished"} <b>${esc(A.m.n)}</b> - ${O.n}${rw.ops?` (${rw.ops>0?"+":""}${fmt(rw.ops)} Ops)`:""}`});
+  S.log=S.log.slice(0,40);
+}
+function tickRivals(gain){
+  S.rivals.forEach(r=>{
+    r.score+=ri(0,55)+Math.round(gain*rnd(.02,.1));
+    if(Math.random()<.05)r.lv++;
+  });
+  const me=S.week.score;
+  S.rivals.forEach(r=>{
+    if(!r.hot&&r.score>me&&r.score-me<160&&Math.random()<.25){
+      r.hot=true;
+      toast("RIVAL",r.n+" just passed your weekly score.","#ff3ad4","i-rival");
+      S.log.unshift({t:Date.now(),c:"#ff3ad4",x:`<b>${r.n}</b> overtook you on the weekly board. Revenge available.`});
+    }
+  });
+}
+
+/* ============================================================
+   9. UI SHELL
+   ============================================================ */
+let UI={tab:"home",map:null,sec:null};
+const view=$("#view"), navEl=$("#nav");
+
+function accent(a,b){document.documentElement.style.setProperty("--ac",a);document.documentElement.style.setProperty("--ac2",b||a)}
+function ico(id,cls){return `<svg class="${cls||""}"><use href="#${id}"/></svg>`}
+function rc(r){return RARITY[r].c}
+
+function toast(t,m,c,icon){
+  const el=document.createElement("div");
+  el.className="toast"; el.style.setProperty("--tc",c||"#22d3ee");
+  el.innerHTML=`${ico(icon||"i-signal")}<div><div class="t">${esc(t)}</div><div class="m">${m}</div></div>`;
+  $("#toasts").appendChild(el);
+  buzz(12);
+  setTimeout(()=>{el.classList.add("out");setTimeout(()=>el.remove(),340)},3400);
+}
+function bumpCur(k){const el=$('[data-cur="'+k+'"]');if(el){el.classList.remove("bump");void el.offsetWidth;el.classList.add("bump")}}
+
+function renderTop(){
+  const cs=[["ops","i-ops",S.ops,"OPS"],["scrap","i-scrap",S.scrap,"SCRAP"],["intel","i-intel",S.intel,"INTEL"],
+    ["keys","i-key",S.keys,"KEYS"],["slots","i-signal",S.active.length+"/"+SLOTS(S.lv),"SLOTS"]];
+  $("#cur").innerHTML=cs.map(([k,i,v,n])=>
+    `<div class="cbox" data-cur="${k}">${ico(i)}<div class="v">${typeof v==="number"?fmt(v):v}</div><div class="k">${n}</div></div>`).join("");
+  $("#plv").textContent=S.lv;
+  $("#pxp").style.width=Math.min(100,S.xp/NEED_XP(S.lv)*100)+"%";
+  const ready=S.active.filter(a=>Date.now()-a.start>=a.ms).length;
+  $("#clock").innerHTML= ready? `<span style="color:var(--gr)">${ready} MISSION${ready>1?"S":""} READY</span>` : (S.title.toUpperCase()+"<br>WEEK "+fmt(S.week.score)+" PTS");
+}
+
+/* ============================================================
+   10. SCREENS
+   ============================================================ */
+function render(){
+  renderTop();
+  const tabs=[["home","i-home","OPS"],["maps","i-map","MAPS"],["crew","i-crew","CREW"],["gear","i-gear","GEAR"],["rivals","i-rival","RIVALS"]];
+  const ready=S.active.filter(a=>Date.now()-a.start>=a.ms).length;
+  navEl.innerHTML=tabs.map(([id,i,n])=>
+    `<div class="nb ${UI.tab===id?"on":""}" data-tab="${id}">${ico(i)}<span>${n}</span>${id==="home"&&ready?`<div class="badge">${ready}</div>`:""}</div>`).join("");
+  if(UI.tab==="maps"&&UI.map){const M=MAP(UI.map);accent(M.ac,M.ac2)}else accent("#22d3ee","#ff3ad4");
+  view.innerHTML=`<div class="screen">${({home:scHome,maps:scMaps,crew:scCrew,gear:scGear,rivals:scRivals}[UI.tab])()}</div>`;
+  view.scrollTop=UI.keepScroll||0; UI.keepScroll=0;
+}
+
+/* ---------- HOME ---------- */
+function scHome(){
+  const slots=SLOTS(S.lv);
+  let h=`<h2 class="title">Operations</h2><p class="lede">${S.active.length} of ${slots} mission slots active. Missions resolve on their own timer, even while you are elsewhere.</p>`;
+  h+=`<div class="sect">Active deployments <span class="cnt">${S.active.length}/${slots}</span></div>`;
+  if(!S.active.length) h+=`<div class="slotempty">NO ACTIVE MISSIONS<br><span style="opacity:.6">OPEN MAPS TO DEPLOY</span></div>`;
+  S.active.forEach(A=>{
+    const c=S.crews.find(x=>x.id===A.crewId)||{n:"?",cls:"scout",id:"x"};
+    const el=Date.now()-A.start, done=el>=A.ms, p=clamp(el/A.ms*100,0,100);
+    const M=MAP(A.m.map);
+    h+=`<div class="card run tap ${done?"ready":""}" data-act="${done?"claim":"peek"}" data-a="${A.a}" style="--ac:${M.ac};--ac2:${M.ac2}">
+      <div class="top">
+        <div class="avatar">${portrait(c.id,c.cls)}</div>
+        <div style="min-width:0">
+          <div class="nm">${esc(A.m.n)}</div>
+          <div class="sb">${esc(c.n)} · ${M.n} · ${M.sec[A.m.sec]}</div>
+        </div>
+        <div class="tmr"><div class="t">${done?"READY":mmss(A.ms-el)}</div><div class="l">${done?"TAP TO CLAIM":RISKS.find(r=>r.id===A.m.risk).n}</div></div>
+      </div>
+      <div class="prog"><i style="width:${p}%"></i></div>
+    </div>`;
+  });
+  for(let i=S.active.length;i<slots;i++) h+=`<div class="slotempty">SLOT ${i+1} · EMPTY</div>`;
+  if(slots<7) h+=`<div class="slotempty slotlock">${ico("i-lock")} NEXT SLOT AT LEVEL ${[10,25,50,75,100].find(l=>l>S.lv)}</div>`;
+
+  h+=`<div class="sect">Daily objectives</div><div class="card" style="padding:2px 0">`;
+  S.daily.objs.forEach((o,i)=>{
+    const done=o.p>=o.g;
+    h+=`<div class="obj ${done?"done":""} ${done&&!o.claimed?"tap":""}" ${done&&!o.claimed?`data-act="claimobj" data-i="${i}"`:""}
+        style="border-bottom:1px solid var(--line)">
+      <div class="tk">${done?ico("i-check"):""}</div>
+      <div><div class="tt">${o.n}</div><div class="pg">${Math.min(o.p,o.g)} / ${o.g}${o.claimed?" · CLAIMED":""}</div></div>
+      <div class="rw">${o.claimed?"":"+"+fmt(o.rw.ops)}</div></div>`;
+  });
+  h+=`</div>`;
+
+  h+=`<div class="sect">Signal feed</div><div class="card" style="padding:4px 13px">`;
+  if(!S.log.length) h+=`<div class="logrow" style="--lc:var(--dim2)"><div class="d"></div><div><div class="tx" style="color:var(--dim)">No transmissions yet. Deploy a crew.</div></div></div>`;
+  S.log.slice(0,8).forEach(l=>{
+    h+=`<div class="logrow" style="--lc:${l.c}"><div class="d"></div><div><div class="tx">${l.x}</div><div class="tm">${ago(l.t)}</div></div></div>`;
+  });
+  h+=`</div>`;
+
+  const entities=MAPS.length*10 + Object.keys(CATS).length + ADDONS.length + CONSUM.length + ARTIFACTS.length + Object.keys(CLASSES).length;
+  h+=`<div class="sect">Under the hood</div>
+  <div class="card" style="padding:13px">
+    <div style="font-size:12.5px;color:var(--dim);line-height:1.6;margin-bottom:10px">
+      Every launch runs a hidden simulation: crew attributes, traits, gear synergies, map conditions, faction pressure, hidden modifiers and a fuzzed probability roll. You only ever see <b style="color:var(--txt)">choose crew, choose mission, launch</b>.</div>
+    <div class="kv"><span class="k">SECTORS</span><span class="v">${MAPS.length*10}</span></div>
+    <div class="kv"><span class="k">MISSION CATEGORIES</span><span class="v">${Object.keys(CATS).length}</span></div>
+    <div class="kv"><span class="k">EQUIPMENT + ARTIFACTS</span><span class="v">${ADDONS.length+CONSUM.length+ARTIFACTS.length}</span></div>
+    <div class="kv"><span class="k">OUTCOME TYPES</span><span class="v">${Object.keys(OUTCOMES).length}</span></div>
+    <div class="kv"><span class="k">TRACKED ENTITIES</span><span class="v">${entities}+</span></div>
+  </div>
+  <div style="height:6px"></div>
+  <button class="btn ghost sm" data-act="reset">RESET SAVE</button>`;
+  return h;
+}
+
+/* ---------- MAPS ---------- */
+function scMaps(){
+  if(!UI.map) return mapList();
+  if(UI.sec===null) return sectorList();
+  return missionList();
+}
+function mapList(){
+  let h=`<h2 class="title">Sector Network</h2><p class="lede">Nine environments. Each one shifts probabilities, durations, loot tables and which crew classes matter.</p>`;
+  MAPS.forEach(M=>{
+    const lock=S.lv<M.lv;
+    const found=(S.disc[M.id]||[]).length;
+    h+=`<div class="card mapcard tap ${lock?"locked":""}" data-act="${lock?"":"map"}" data-id="${M.id}" style="--mc:${M.ac}">
+      <div class="art" style="background:
+        radial-gradient(120% 90% at 85% 20%, ${M.ac}55, transparent 60%),
+        radial-gradient(90% 120% at 15% 90%, ${M.ac2}44, transparent 62%),
+        linear-gradient(120deg,#0a0f1c,#060a13)"></div>
+      <div class="shade"></div>
+      <div class="in"><div class="idx">${M.idx}</div><div class="nm">${M.n}</div>
+        <div class="ds">${lock?"Unlocks at operator level "+M.lv:M.d}</div></div>
+      ${lock?`<div class="lockbadge">${ico("i-lock")} LV ${M.lv}</div>`:`<div class="lockbadge" style="color:${M.ac};border-color:${M.ac}55">${found}/10 SECTORS</div>`}
+    </div>`;
+  });
+  return h;
+}
+function sectorList(){
+  const M=MAP(UI.map), disc=S.disc[M.id]||[];
+  let h=`<div style="display:flex;align-items:center;gap:8px;margin:4px 0 6px">
+    <div class="x tap" data-act="back">${ico("i-back")}</div>
+    <div><div class="mono" style="font-size:8.5px;letter-spacing:.24em;color:${M.ac}">${M.idx}</div>
+    <div style="font-size:20px;font-weight:800;letter-spacing:-.02em">${M.n}</div></div></div>
+  <p class="lede">${M.d}</p>
+  <div class="chiprow" style="margin:9px 0 2px">${M.mods.map(x=>`<span class="chip ${x.startsWith("+")?"pos":""}">${esc(x)}</span>`).join("")}
+  <span class="chip rare">EVENT: ${M.ev}</span></div>
+  <div class="sect">Sectors <span class="cnt">${disc.length}/10 DISCOVERED</span></div><div class="sgrid">`;
+  M.sec.forEach((s,i)=>{
+    const d=disc.includes(i);
+    h+=`<div class="scell ${d?"tap":"undisc"}" ${d?`data-act="sec" data-i="${i}"`:""} style="--ac:${M.ac}">
+      ${d?`<div class="dot"></div>`:""}
+      <div class="n">${d?esc(s):"UNDISCOVERED"}</div>
+      <div class="m">${d?`DEPTH ${i+1} · ${missionsFor(M.id,i).length} CONTRACTS`:"RUN EXPLORATION OPS"}</div></div>`;
+  });
+  h+=`</div>`;
+  return h;
+}
+function missionList(){
+  const M=MAP(UI.map), sec=UI.sec, list=missionsFor(M.id,sec);
+  let h=`<div style="display:flex;align-items:center;gap:8px;margin:4px 0 6px">
+    <div class="x tap" data-act="backsec">${ico("i-back")}</div>
+    <div><div class="mono" style="font-size:8.5px;letter-spacing:.24em;color:${M.ac}">${M.n} · DEPTH ${sec+1}</div>
+    <div style="font-size:20px;font-weight:800;letter-spacing:-.02em">${M.sec[sec]}</div></div></div>
+  <p class="lede">Contracts refresh over time. Displayed probability is an estimate, not the underlying calculation.</p>
+  <div class="sect">Available contracts <span class="cnt">${list.length}</span></div>`;
+  const crew=S.crews.filter(c=>!S.active.some(a=>a.crewId===c.id));
+  list.forEach(m=>{
+    const best=crew.length?crew.reduce((a,b)=>forecast(m,a).chance>=forecast(m,b).chance?a:b):null;
+    const f=best?forecast(m,best):{chance:0,reward:m.cost*m.rwMul};
+    const R=RISKS.find(r=>r.id===m.risk), D=DURS.find(d=>d.id===m.dur);
+    const fac=m.fac?FACTIONS.find(x=>x.id===m.fac):null;
+    h+=`<div class="card mcard tap r-${m.risk}" data-act="mission" data-id="${m.id}">
+      <div class="mhead"><div style="min-width:0">
+        <div class="mname">${m.secret?`<span style="color:var(--vi)">◈ </span>`:""}${esc(m.n)}</div>
+        <div class="mmeta">${CATS[m.cat].n} · ${R.n} · ${D.label}</div>
+        <div class="chiprow" style="margin-top:8px">
+          ${fac?`<span class="chip" style="color:${fac.c};border-color:${fac.c}55">${fac.n}</span>`:""}
+          ${m.mods.map(md=>md.hidden?`<span class="chip">◇ UNKNOWN</span>`:`<span class="chip ${md.t==="rare"?"rare":md.t==="pos"?"pos":"neg"}">${esc(md.n)}</span>`).join("")}
+        </div></div>
+        <div class="ring" style="--p:${f.chance}"><i>${f.chance}%</i><b>EST</b></div>
+      </div>
+      <div class="mfoot">
+        <div class="stat"><span class="k">ENTRY</span><span class="v ops">${fmt(m.cost)}</span></div>
+        <div class="stat"><span class="k">PAYOUT</span><span class="v">~${fmt(f.reward)}</span></div>
+        <div class="stat"><span class="k">TIME</span><span class="v">${mmss(DURS.find(d=>d.id===m.dur).ms)}</span></div>
+        <div class="go">DEPLOY</div>
+      </div></div>`;
+  });
+  return h;
+}
+
+/* ---------- CREW ---------- */
+function scCrew(){
+  let h=`<h2 class="title">Crew</h2><p class="lede">Ten classes, nine attributes, permanent traits and equipment slots that open at levels 10, 25 and 40.</p>`;
+  h+=`<div class="sect">Roster <span class="cnt">${S.crews.length}</span></div>`;
+  S.crews.forEach(c=>{
+    const busy=S.active.some(a=>a.crewId===c.id), C=CLASSES[c.cls];
+    const top=[...STATS].sort((a,b)=>stat(c,b)-stat(c,a)).slice(0,3);
+    h+=`<div class="card crewcard tap" data-act="crew" data-id="${c.id}" style="--cc:${C.c}">
+      <div class="av">${portrait(c.id,c.cls)}</div>
+      <div class="body">
+        <div class="nm">${esc(c.n)} <span class="cls">${C.n}</span></div>
+        <div class="lvl">LV ${c.lv} · ${c.lv>=50?"LEGEND":c.lv>=40?"ELITE":c.lv>=25?"VETERAN":c.lv>=10?"SPECIALIST":"OPERATIVE"} · ${c.eq.length}/${EQ_SLOTS(c.lv)} SLOTS</div>
+        <div class="bars">${top.map(k=>`<div class="bar"><span class="k">${STAT_N[k]}</span>
+          <span class="t"><i style="width:${Math.min(100,stat(c,k))}%"></i></span><span class="v">${stat(c,k)}</span></div>`).join("")}</div>
+      </div>
+      ${busy?`<div class="busy">DEPLOYED</div>`:""}
+    </div>`;
+  });
+  h+=`<div class="sect">Recruitment</div>
+  <div class="card" style="padding:13px">
+    <div style="font-size:12.5px;color:var(--dim);line-height:1.55;margin-bottom:11px">Hire an unproven operative from the local network. Class, attributes and traits are rolled on contact.</div>
+    <button class="btn ${S.ops<450?"":""}" data-act="hire" ${S.ops<450?"disabled":""}>${S.ops<450?"NEED 450 OPS":"RECRUIT · 450 OPS"}</button>
+  </div>`;
+  return h;
+}
+
+/* ---------- GEAR ---------- */
+function scGear(){
+  const addons=S.inv.filter(x=>ADDONS.some(a=>a.id===x.id));
+  const arts=S.inv.filter(x=>ARTIFACTS.some(a=>a.id===x.id));
+  let h=`<h2 class="title">Equipment</h2><p class="lede">Add-ons are permanent and shift crew attributes. Power-ups are consumed by one mission. Some combinations unlock synergies.</p>`;
+  h+=`<div class="sect">Power-ups <span class="cnt">${Object.values(S.consum).reduce((a,b)=>a+b,0)}</span></div><div class="ggrid">`;
+  const cons=Object.keys(S.consum).filter(k=>S.consum[k]>0);
+  if(!cons.length) h+=`<div class="slotempty" style="grid-column:1/-1">NO POWER-UPS</div>`;
+  cons.forEach(id=>{const it=CONSUM.find(c=>c.id===id);
+    h+=`<div class="gitem" style="--rc:${rc(it.r)}">${ico(it.ic,"ic")}<div class="n">${it.n}</div>
+    <div class="e">${it.e}</div><div class="r">${RARITY[it.r].n}</div><div class="q">x${S.consum[id]}</div></div>`});
+  h+=`</div>`;
+  h+=`<div class="sect">Add-ons <span class="cnt">${addons.length}</span></div><div class="ggrid">`;
+  if(!addons.length) h+=`<div class="slotempty" style="grid-column:1/-1">NO ADD-ONS</div>`;
+  addons.forEach(x=>{const it=ITEM(x.id), eq=S.crews.find(c=>c.eq.includes(x.id));
+    h+=`<div class="gitem tap ${eq?"equipped":""}" data-act="item" data-id="${x.id}" style="--rc:${rc(it.r)}">
+      ${ico(it.ic,"ic")}<div class="n">${it.n}</div><div class="e">${it.e}</div>
+      <div class="r">${RARITY[it.r].n}${eq?" · ON "+esc(eq.n):""}</div></div>`});
+  h+=`</div>`;
+  h+=`<div class="sect">Artifacts <span class="cnt">${arts.length}</span></div><div class="ggrid">`;
+  if(!arts.length) h+=`<div class="slotempty" style="grid-column:1/-1">NONE RECOVERED YET<br><span style="opacity:.6">EXTREME + LEGENDARY MISSIONS</span></div>`;
+  arts.forEach(x=>{const it=ITEM(x.id), eq=S.crews.find(c=>c.eq.includes(x.id));
+    h+=`<div class="gitem tap ${eq?"equipped":""}" data-act="item" data-id="${x.id}" style="--rc:${rc(it.r)}">
+      ${ico(it.ic,"ic")}<div class="n">${it.n}</div><div class="e">${it.e}</div>
+      <div class="r">${RARITY[it.r].n}${eq?" · ON "+esc(eq.n):""}</div></div>`});
+  h+=`</div>`;
+  h+=`<div class="sect">Synergies</div>`;
+  SYNERGIES.forEach(s=>{
+    const on=S.crews.some(c=>(!s.cls||s.cls===c.cls)&&s.req.every(r=>c.eq.includes(r)));
+    h+=`<div class="card" style="padding:11px 13px;${on?"border-color:var(--gr)":""}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.18em;font-weight:700;color:${on?"var(--gr)":"var(--dim)"}">${s.n}</div>
+        <div class="chip ${on?"pos":""}" style="margin-left:auto">${on?"ACTIVE":"+"+s.b+"%"}</div></div>
+      <div style="font-size:11.5px;color:var(--dim);margin-top:6px">${s.e}</div>
+      <div class="chiprow" style="margin-top:7px">${s.req.map(r=>`<span class="chip">${ITEM(r).n}</span>`).join("")}
+        <span class="chip ac">${CLASSES[s.cls].n}</span></div></div>`;
+  });
+  h+=`<div class="sect">Crafting</div>
+  <div class="card" style="padding:13px">
+    <div style="font-size:12.5px;color:var(--dim);line-height:1.55;margin-bottom:11px">Break scrap into an unidentified add-on. Rarity is rolled at fabrication.</div>
+    <button class="btn ${S.scrap<80?"":""}" data-act="craft" ${S.scrap<80?"disabled":""}>${S.scrap<80?"NEED 80 SCRAP":"FABRICATE · 80 SCRAP"}</button>
+  </div>`;
+  return h;
+}
+
+/* ---------- RIVALS ---------- */
+function scRivals(){
+  const rows=[...S.rivals.map(r=>({n:r.n,s:r.score,tag:r.tag,hot:r.hot,me:false})),
+    {n:S.name,s:S.week.score,tag:S.title,me:true}].sort((a,b)=>b.s-a.s);
+  let h=`<h2 class="title">Rivals</h2><p class="lede">PvP is asynchronous. Nobody has to be online. The system compares crew, gear, mission choice, timing and luck.</p>`;
+  h+=`<div class="sect">Weekly leaderboard</div><div class="card lb">`;
+  rows.forEach((r,i)=>{
+    h+=`<div class="lbrow ${r.me?"me":""}">
+      <div class="pos">${i+1}</div>
+      <div><div class="nm">${esc(r.n)}</div><div class="tg">${esc(r.tag)}${r.hot?" · OVERTOOK YOU":""}</div></div>
+      ${r.hot&&!r.me?`<div class="rv tap" data-act="revenge" data-n="${esc(r.n)}">REVENGE</div>`:`<div class="sc">${fmt(r.s)}</div>`}
+    </div>`;
+  });
+  h+=`</div>`;
+  h+=`<div class="sect">Weekly rewards</div><div class="card" style="padding:13px">
+    <div class="kv"><span class="k">TOP 1%</span><span class="v" style="color:var(--c-legendary)">LEGENDARY REWARD</span></div>
+    <div class="kv"><span class="k">TOP 5%</span><span class="v" style="color:var(--c-epic)">EPIC REWARD</span></div>
+    <div class="kv"><span class="k">TOP 10%</span><span class="v" style="color:var(--c-rare)">RARE REWARD</span></div>
+    <div class="kv"><span class="k">TOP 25%</span><span class="v">OPS + MATERIALS</span></div></div>`;
+  h+=`<div class="sect">Faction standing</div>`;
+  FACTIONS.forEach(f=>{
+    const rp=S.rep[f.id]||0, lv=Math.min(8,Math.floor(rp/60)), nx=(lv+1)*60;
+    h+=`<div class="card" style="padding:11px 13px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;font-weight:700;color:${f.c}">${f.n}</div>
+        <div class="chip" style="margin-left:auto;color:${f.c};border-color:${f.c}55">${REP_LV[lv]}</div></div>
+      <div style="font-size:11px;color:var(--dim2);margin-top:5px;font-family:var(--mono);letter-spacing:.1em">${f.f.toUpperCase()} · ${rp}/${nx}</div>
+      <div class="prog" style="margin-top:8px"><i style="width:${Math.min(100,rp/nx*100)}%;background:${f.c}"></i></div></div>`;
+  });
+  return h;
+}
+
+/* ============================================================
+   11. SHEETS
+   ============================================================ */
+const wrap=$("#sheetwrap"), sheet=$("#sheet");
+let SH=null;
+function openSheet(html){sheet.innerHTML=`<div class="grab"></div>`+html;wrap.classList.add("on");sheet.scrollTop=0}
+function closeSheet(){wrap.classList.remove("on");SH=null}
+$("#sheetbg").addEventListener("click",closeSheet);
+
+/* ---- mission launch ---- */
+function sheetMission(m){
+  const avail=S.crews.filter(c=>!S.active.some(a=>a.crewId===c.id));
+  if(!SH||SH.type!=="mission"||SH.m.id!==m.id){
+    SH={type:"mission",m,crew:avail[0]?avail[0].id:null,cons:[]};
+    if(avail.length) SH.crew=avail.reduce((a,b)=>forecast(m,a).chance>=forecast(m,b).chance?a:b).id;
+  }
+  drawMissionSheet();
+}
+function drawMissionSheet(){
+  const m=SH.m, M=MAP(m.map), R=RISKS.find(r=>r.id===m.risk), D=DURS.find(d=>d.id===m.dur);
+  const avail=S.crews.filter(c=>!S.active.some(a=>a.crewId===c.id));
+  const crew=S.crews.find(c=>c.id===SH.crew);
+  const f=crew?forecast(m,crew,SH.cons):{chance:0,reward:0,parts:[],syn:[],band:10};
+  const ms=crew?durMs(m,crew,SH.cons):D.ms;
+  const fac=m.fac?FACTIONS.find(x=>x.id===m.fac):null;
+  const lo=clamp(f.chance-f.band,2,99), hi=clamp(f.chance+f.band,3,99);
+  const cons=Object.keys(S.consum).filter(k=>S.consum[k]>0);
+  let h=`<div class="shead r-${m.risk}">
+    <div><div class="t">${m.secret?"◈ ":""}${esc(m.n)}</div>
+    <div class="s">${CATS[m.cat].n} · ${R.n} · ${M.n} / ${M.sec[m.sec]}</div></div>
+    <div class="x tap" data-act="closesheet">${ico("i-x")}</div></div>`;
+  h+=`<div class="chiprow" style="margin-bottom:11px">
+    ${fac?`<span class="chip" style="color:${fac.c};border-color:${fac.c}55">${fac.n}</span>`:""}
+    <span class="chip">${D.n} · ${D.label}</span>
+    ${m.mods.map(md=>{
+      const known=!md.hidden||SH.cons.includes("intelc")||(crew&&(crew.sp==="reveal"||crew.eq.includes("oracleeye")));
+      return known?`<span class="chip ${md.t==="rare"?"rare":md.t==="pos"?"pos":"neg"}">${esc(md.n)} ${md.d?(md.d>0?"+":"")+md.d+"%":""}</span>`
+        :`<span class="chip">◇ HIDDEN MODIFIER</span>`}).join("")}</div>`;
+
+  h+=`<div class="fc r-${m.risk}"><div class="fcrow">
+      <div><div class="fcbig">${f.chance}%</div><div class="fclab">ESTIMATED SUCCESS</div></div>
+      <div style="flex:1">
+        <div class="fcband"><i style="left:${lo}%;right:${100-hi}%"></i></div>
+        <div class="fclab" style="margin-top:6px">CONFIDENCE BAND ${lo}-${hi}%</div>
+      </div></div>
+    <div class="brk">
+      ${f.parts.slice(0,7).map(p=>`<div class="brkrow"><span class="k">${esc(p.k)}</span><span class="v ${p.p?"p":"n"}">${p.v>0?"+":""}${p.v}</span></div>`).join("")}
+      <div class="brkrow" style="border-top:1px solid var(--line);padding-top:7px;margin-top:2px">
+        <span class="k">HIDDEN VARIABLES</span><span class="v" style="color:var(--dim2)">${m.mods.filter(x=>x.hidden).length + 2 + hash(m.id)%4} NOT SHOWN</span></div>
+    </div></div>`;
+
+  h+=`<div class="sect">Select crew</div>`;
+  if(!avail.length) h+=`<div class="slotempty">EVERY CREW IS DEPLOYED</div>`;
+  avail.forEach(c=>{
+    const cf=forecast(m,c,SH.cons), C=CLASSES[c.cls];
+    h+=`<div class="pick ${SH.crew===c.id?"on":""} tap" data-act="pickcrew" data-id="${c.id}">
+      <div class="av">${portrait(c.id,c.cls)}</div>
+      <div style="min-width:0"><div class="nm">${esc(c.n)}</div>
+      <div class="sb" style="color:${C.c}">${C.n} · LV ${c.lv}</div></div>
+      <div class="rt"><div class="big">${cf.chance}%</div><div class="sm">${fmt(cf.reward)} OPS</div></div></div>`;
+  });
+
+  h+=`<div class="sect">Power-ups <span class="cnt">${SH.cons.length}/2</span></div>`;
+  if(!cons.length) h+=`<div class="slotempty">NO POWER-UPS IN INVENTORY</div>`;
+  cons.forEach(id=>{
+    const it=CONSUM.find(c=>c.id===id), on=SH.cons.includes(id);
+    const dis=!on&&SH.cons.length>=2;
+    h+=`<div class="pick ${on?"on":""} ${dis?"off":"tap"}" ${dis?"":`data-act="pickcons" data-id="${id}"`}>
+      <div style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:${rc(it.r)}22;color:${rc(it.r)}">${ico(it.ic)}</div>
+      <div style="min-width:0"><div class="nm">${it.n}</div><div class="sb">${it.e}</div></div>
+      <div class="rt"><div class="big" style="color:${rc(it.r)}">x${S.consum[id]}</div></div></div>`;
+  });
+
+  const afford=crew&&S.ops>=m.cost, slot=S.active.length<SLOTS(S.lv);
+  h+=`<div class="fc" style="margin-top:14px">
+    <div style="display:flex;gap:14px">
+      <div class="stat"><span class="k">ENTRY COST</span><span class="v ops">${fmt(m.cost)}</span></div>
+      <div class="stat"><span class="k">ON SUCCESS</span><span class="v" style="color:var(--gr)">+${fmt(f.reward)}</span></div>
+      <div class="stat"><span class="k">DURATION</span><span class="v">${mmss(ms)}</span></div>
+    </div></div>
+  <button class="btn" data-act="launch" ${afford&&slot?"":"disabled"}>
+    ${!crew?"NO CREW AVAILABLE":!slot?"NO FREE MISSION SLOT":!afford?"NOT ENOUGH OPS":"LAUNCH MISSION · "+fmt(m.cost)+" OPS"}</button>
+  <div class="hint">MISSION RESOLVES ON ITS OWN TIMER<br>YOU WILL BE NOTIFIED WHEN IT LANDS</div>`;
+  openSheet(h);
+}
+
+/* ---- crew detail ---- */
+function sheetCrew(c){
+  const C=CLASSES[c.cls], slots=EQ_SLOTS(c.lv), syn=crewSyn(c);
+  const free=S.inv.filter(x=>!S.crews.some(cc=>cc.eq.includes(x.id)));
+  let h=`<div class="shead">
+    <div style="display:flex;gap:11px;align-items:center">
+      <div class="av" style="width:56px;height:56px;border-radius:15px;overflow:hidden;border:1px solid var(--line2)">${portrait(c.id,c.cls)}</div>
+      <div><div class="t">${esc(c.n)}</div><div class="s" style="color:${C.c}">${C.n} · LEVEL ${c.lv}</div></div>
+    </div><div class="x tap" data-act="closesheet">${ico("i-x")}</div></div>`;
+  h+=`<div class="prog"><i style="width:${c.xp/CREW_NEED(c.lv)*100}%"></i></div>
+    <div class="hint" style="text-align:left;margin:6px 0 2px">${c.xp} / ${CREW_NEED(c.lv)} XP · ${c.runs} RUNS · ${c.wins} WINS</div>`;
+  h+=`<div class="sect">Attributes</div><div class="card" style="padding:12px 13px">
+    <div class="bars" style="--cc:${C.c}">${STATS.map(k=>{
+      const base=c.st[k], tot=stat(c,k), d=tot-base;
+      return `<div class="bar" style="--cc:${C.c}"><span class="k">${STAT_N[k]}</span>
+      <span class="t"><i style="width:${Math.min(100,tot)}%"></i></span>
+      <span class="v" style="color:${d>0?"var(--gr)":d<0?"var(--rd)":"var(--dim)"}">${tot}</span></div>`}).join("")}</div></div>`;
+  h+=`<div class="sect">Traits</div><div class="chiprow">${c.tr.map(t=>{
+    const r=TRAITS.rare.some(x=>x[0]===t), n=TRAITS.neg.some(x=>x[0]===t);
+    return `<span class="chip ${r?"rare":n?"neg":"pos"}">${t}</span>`}).join("")}</div>`;
+  h+=`<div class="sect">Class abilities</div><div class="chiprow">${C.ab.map(a=>`<span class="chip ac">${a}</span>`).join("")}</div>`;
+  if(c.sp) h+=`<div class="card" style="padding:11px 13px;margin-top:9px;border-color:${C.c}55">
+    <div class="mono" style="font-size:9px;letter-spacing:.2em;color:${C.c}">SIGNATURE</div>
+    <div style="font-size:12.5px;margin-top:5px">${STARTERS.find(s=>s.sp===c.sp)?STARTERS.find(s=>s.sp===c.sp).ab:"Unique protocol"}</div></div>`;
+  if(syn.length) h+=`<div class="sect">Active synergies</div>${syn.map(s=>`<div class="card" style="padding:11px 13px;border-color:var(--gr)">
+    <div class="mono" style="font-size:10px;letter-spacing:.18em;color:var(--gr)">${s.n} +${s.b}%</div>
+    <div style="font-size:11.5px;color:var(--dim);margin-top:5px">${s.e}</div></div>`).join("")}`;
+
+  h+=`<div class="sect">Equipment <span class="cnt">${c.eq.length}/${slots}</span></div>`;
+  c.eq.forEach(id=>{const it=ITEM(id);
+    h+=`<div class="pick tap" data-act="unequip" data-c="${c.id}" data-id="${id}">
+      <div style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:${rc(it.r)}22;color:${rc(it.r)}">${ico(it.ic)}</div>
+      <div style="min-width:0"><div class="nm">${it.n}</div><div class="sb">${it.e}</div></div>
+      <div class="rt"><div class="sm" style="color:var(--rd)">REMOVE</div></div></div>`});
+  for(let i=c.eq.length;i<slots;i++) h+=`<div class="slotempty" style="padding:11px">EMPTY SLOT ${i+1}</div>`;
+  if(slots<7) h+=`<div class="hint" style="margin:2px 0 6px">NEXT SLOT AT CREW LEVEL ${[10,25,40].find(l=>l>c.lv)||50}</div>`;
+  if(c.eq.length<slots&&free.length){
+    h+=`<div class="sect">Available</div>`;
+    free.forEach(x=>{const it=ITEM(x.id);
+      h+=`<div class="pick tap" data-act="equip" data-c="${c.id}" data-id="${x.id}">
+        <div style="width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:${rc(it.r)}22;color:${rc(it.r)}">${ico(it.ic)}</div>
+        <div style="min-width:0"><div class="nm">${it.n}</div><div class="sb">${it.e}</div></div>
+        <div class="rt"><div class="sm" style="color:var(--ac)">EQUIP</div></div></div>`});
+  }
+  openSheet(h);
+}
+
+/* ---- item ---- */
+function sheetItem(id){
+  const it=ITEM(id);
+  const holder=S.crews.find(c=>c.eq.includes(id));
+  let h=`<div class="shead"><div><div class="t">${it.n}</div>
+    <div class="s" style="color:${rc(it.r)}">${RARITY[it.r].n} · ${ARTIFACTS.some(a=>a.id===id)?"ARTIFACT":"ADD-ON"}</div></div>
+    <div class="x tap" data-act="closesheet">${ico("i-x")}</div></div>
+    <div class="card" style="padding:13px;border-color:${rc(it.r)}44">
+      <div style="font-size:13px;line-height:1.5">${it.e}</div>
+      <div class="chiprow" style="margin-top:10px">${Object.entries(it.st||{}).map(([k,v])=>
+        `<span class="chip ${v>0?"pos":"neg"}">${STAT_N[k]} ${v>0?"+":""}${v}</span>`).join("")}</div></div>`;
+  h+=`<div class="sect">${holder?"Equipped on":"Assign to crew"}</div>`;
+  S.crews.forEach(c=>{
+    const on=c.eq.includes(id), full=c.eq.length>=EQ_SLOTS(c.lv);
+    h+=`<div class="pick ${on?"on":""} ${full&&!on?"off":"tap"}" ${full&&!on?"":`data-act="${on?"unequip":"equip"}" data-c="${c.id}" data-id="${id}"`}>
+      <div class="av">${portrait(c.id,c.cls)}</div>
+      <div><div class="nm">${esc(c.n)}</div><div class="sb" style="color:${CLASSES[c.cls].c}">${CLASSES[c.cls].n} · ${c.eq.length}/${EQ_SLOTS(c.lv)}</div></div>
+      <div class="rt"><div class="sm" style="color:${on?"var(--rd)":full?"var(--dim2)":"var(--ac)"}">${on?"REMOVE":full?"FULL":"EQUIP"}</div></div></div>`;
+  });
+  openSheet(h);
+}
+
+/* ============================================================
+   12. RESULT TAKEOVER
+   ============================================================ */
+function showResult(r){
+  const {k,O,rw,crew,A,lvUps,cUp}=r;
+  const el=$("#res"); el.style.setProperty("--oc",O.c);
+  const rows=[];
+  if(rw.ops) rows.push({ic:"i-ops",k:"OPS",v:(rw.ops>0?"+":"")+fmt(rw.ops),cls:rw.ops>0?"gain":"loss"});
+  if(rw.scrap) rows.push({ic:"i-scrap",k:"SCRAP",v:"+"+fmt(rw.scrap),cls:"gain"});
+  if(rw.intel) rows.push({ic:"i-intel",k:"INTEL",v:"+"+rw.intel,cls:"gain"});
+  if(rw.keys) rows.push({ic:"i-key",k:"KEYS",v:"+"+rw.keys,cls:"gain"});
+  if(rw.xp) rows.push({ic:"i-xp",k:"XP",v:"+"+rw.xp,cls:"gain"});
+  el.innerHTML=`<div class="burst"></div><div class="burst" style="animation-delay:.18s"></div>
+    ${ico(O.ic,"rico")}
+    <div class="rkind">${O.n}</div>
+    <div class="rttl">${esc(A.m.n)}</div>
+    <div class="rsub">${O.t} ${rw.note?"<br>"+esc(rw.note):""}${rw.sector?`<br>New sector unlocked: <b style="color:${O.c}">${esc(rw.sector)}</b>`:""}</div>
+    <div class="rew">
+      ${rows.map(r=>`<div class="rewrow ${r.cls}">${ico(r.ic)}<span class="k">${r.k}</span><span class="v">${r.v}</span></div>`).join("")}
+      ${rw.items.map(id=>{const it=ITEM(id);return `<div class="rewrow drop" style="--rc:${rc(it.r)}">${ico(it.ic)}<span class="k">${RARITY[it.r].n}</span><span class="v">${it.n}</span></div>`}).join("")}
+      ${lvUps?`<div class="rewrow" style="border-color:var(--ac)">${ico("i-star")}<span class="k">OPERATOR</span><span class="v" style="color:var(--ac)">LEVEL ${S.lv}</span></div>`:""}
+      ${cUp?`<div class="rewrow" style="border-color:${CLASSES[crew.cls].c}">${ico("i-star")}<span class="k">${esc(crew.n)}</span><span class="v" style="color:${CLASSES[crew.cls].c}">LEVEL ${crew.lv}</span></div>`:""}
+    </div>
+    <button class="btn" data-act="closeres">CONTINUE</button>`;
+  el.classList.add("on");
+  buzz(k==="critical"?[30,60,30]:[14,40,14]);
+}
+
+/* ============================================================
+   13. INTERACTION
+   ============================================================ */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-act]");
+  const nb=e.target.closest("[data-tab]");
+  if(nb){UI.tab=nb.dataset.tab;if(UI.tab!=="maps"){UI.map=null;UI.sec=null}buzz(8);render();return}
+  if(!t)return;
+  const a=t.dataset.act;
+  buzz(8);
+  switch(a){
+    case "map": UI.map=t.dataset.id;UI.sec=null;render();break;
+    case "back": UI.map=null;UI.sec=null;render();break;
+    case "backsec": UI.sec=null;render();break;
+    case "sec": UI.sec=+t.dataset.i;render();break;
+    case "mission":{
+      const list=missionsFor(UI.map,UI.sec), m=list.find(x=>x.id===t.dataset.id);
+      if(m) sheetMission(m); break;
+    }
+    case "pickcrew": SH.crew=t.dataset.id; drawMissionSheet(); break;
+    case "pickcons":{
+      const id=t.dataset.id;
+      SH.cons=SH.cons.includes(id)?SH.cons.filter(x=>x!==id):[...SH.cons,id].slice(0,2);
+      drawMissionSheet(); break;
+    }
+    case "launch":{
+      const crew=S.crews.find(c=>c.id===SH.crew), nm=SH.m.n;
+      if(crew&&launch(SH.m,crew,SH.cons)){
+        closeSheet(); UI.tab="home"; UI.map=null; UI.sec=null;
+        toast("DEPLOYED",esc(crew.n)+" is running "+esc(nm),"#22d3ee","i-bolt");
+        render();
+      }
+      break;
+    }
+    case "claim":{
+      const A=S.active.find(x=>x.a===t.dataset.a);
+      if(A&&Date.now()-A.start>=A.ms){ const r=resolve(A); render(); showResult(r) }
+      break;
+    }
+    case "peek":{
+      const A=S.active.find(x=>x.a===t.dataset.a);
+      if(A) toast("IN PROGRESS",mmss(A.ms-(Date.now()-A.start))+" remaining · est "+A.chance+"%","#fbbf24","i-clock");
+      break;
+    }
+    case "closeres": $("#res").classList.remove("on"); render(); break;
+    case "closesheet": closeSheet(); break;
+    case "crew":{const c=S.crews.find(x=>x.id===t.dataset.id); if(c) sheetCrew(c); break}
+    case "item": sheetItem(t.dataset.id); break;
+    case "equip":{
+      const c=S.crews.find(x=>x.id===t.dataset.c), id=t.dataset.id;
+      if(c&&c.eq.length<EQ_SLOTS(c.lv)&&!S.crews.some(x=>x.eq.includes(id))){c.eq.push(id);save();sheetCrew(c);render()}
+      break;
+    }
+    case "unequip":{
+      const c=S.crews.find(x=>x.id===t.dataset.c);
+      if(c){c.eq=c.eq.filter(x=>x!==t.dataset.id);save();sheetCrew(c);render()}
+      break;
+    }
+    case "hire":{
+      if(S.ops<450)break;
+      S.ops-=450;
+      const c=newCrew(pick(Object.keys(CLASSES)),Math.max(1,S.lv-1));
+      S.crews.push(c); save(); render();
+      toast("RECRUITED",c.n+" · "+CLASSES[c.cls].n,CLASSES[c.cls].c,"i-crew");
+      sheetCrew(c);
+      break;
+    }
+    case "craft":{
+      if(S.scrap<80)break;
+      S.scrap-=80;
+      const it=wpick(ADDONS,x=>RARITY[x.r].w*1.4);
+      S.inv.push({u:uid(),id:it.id}); save(); render();
+      toast("FABRICATED",it.n+" · "+RARITY[it.r].n,rc(it.r),"i-gear");
+      break;
+    }
+    case "claimobj":{
+      const o=S.daily.objs[+t.dataset.i];
+      if(o&&o.p>=o.g&&!o.claimed){
+        o.claimed=true;
+        S.ops+=o.rw.ops||0; S.scrap+=o.rw.scrap||0; S.intel+=o.rw.intel||0; S.keys+=o.rw.keys||0;
+        save(); render(); bumpCur("ops");
+        toast("CLAIMED","+"+fmt(o.rw.ops||0)+" Ops from daily objective","#34d399","i-check");
+      }
+      break;
+    }
+    case "revenge":{
+      const r=S.rivals.find(x=>x.n===t.dataset.n);
+      if(r){
+        r.hot=false;
+        S.week.score+=ri(60,160);
+        S.ops+=ri(80,220);
+        trackObj("rival",1);
+        save(); render(); bumpCur("ops");
+        toast("REVENGE","You clawed back points from "+r.n,"#ff3ad4","i-rival");
+      }
+      break;
+    }
+    case "reset":
+      if(confirm("Wipe this save and start over?")){localStorage.removeItem(SAVE_KEY);location.reload()}
+      break;
+  }
+});
+
+/* ============================================================
+   14. LOOP
+   ============================================================ */
+function tick(){
+  if(!S)return;
+  let dirty=false;
+  S.active.forEach(A=>{
+    const el=Date.now()-A.start;
+    if(el>=A.ms&&!A.notified){
+      A.notified=true; dirty=true;
+      const c=S.crews.find(x=>x.id===A.crewId);
+      toast("MISSION COMPLETE",(c?c.n:"Crew")+" is back from "+A.m.n,"#34d399","i-signal");
+      save();
+    }
+  });
+  if(UI.tab==="home"&&!wrap.classList.contains("on")&&!$("#res").classList.contains("on")){
+    S.active.forEach(A=>{
+      const card=$(`[data-a="${A.a}"]`); if(!card)return;
+      const el=Date.now()-A.start, done=el>=A.ms;
+      const tEl=$(".tmr .t",card), lEl=$(".tmr .l",card), bar=$(".prog i",card);
+      if(bar) bar.style.width=clamp(el/A.ms*100,0,100)+"%";
+      if(tEl) tEl.textContent=done?"READY":mmss(A.ms-el);
+      if(lEl&&done) lEl.textContent="TAP TO CLAIM";
+      if(done&&!card.classList.contains("ready")){card.classList.add("ready");card.dataset.act="claim"}
+    });
+  }
+  if(dirty) renderTop();
+}
+setInterval(tick,1000);
+setInterval(()=>{ if(S){tickRivals(0);save();if(UI.tab==="rivals")render()} },45000);
+
+/* daily rollover */
+function checkDaily(){
+  if(S.daily.day!==today()){S.daily={day:today(),objs:rollDaily()};S.week.score=Math.round(S.week.score*.8);save()}
+}
+
+/* ============================================================
+   15. INTRO / BOOT
+   ============================================================ */
+function intro(){
+  let sel=null;
+  const el=$("#intro");
+  const draw=()=>{
+    el.innerHTML=`
+      <div class="logo">DISPATCH</div>
+      <div class="tag">ASYNCHRONOUS OPERATIONS NETWORK</div>
+      <div class="pitch">Send a crew into a sector. Pay the entry cost.<br>Walk away. Something happens without you.</div>
+      <div class="sect" style="margin-top:20px">Choose your first operative</div>
+      ${STARTERS.map(s=>{const C=CLASSES[s.cls];
+        return `<div class="starter ${sel===s.id?"on":""}" data-s="${s.id}" style="--cc:${C.c}">
+          <div class="av">${portrait(s.id,s.cls)}</div>
+          <div style="min-width:0"><div class="nm">${s.n} <span class="cls" style="--cc:${C.c}">${C.n}</span></div>
+          <div class="rl">${s.role}</div><div class="ab">${s.ab}</div></div></div>`}).join("")}
+      <div style="height:8px"></div>
+      <button class="btn" id="startbtn" ${sel?"":"disabled"}>${sel?"ENTER THE NETWORK":"SELECT AN OPERATIVE"}</button>
+      <div class="hint">PROTOTYPE BUILD · MISSION TIMERS COMPRESSED<br>PROGRESS SAVES TO THIS DEVICE</div>`;
+    $$("[data-s]",el).forEach(n=>n.onclick=()=>{sel=n.dataset.s;buzz(8);draw()});
+    const b=$("#startbtn",el);
+    if(b) b.onclick=()=>{
+      if(!sel)return;
+      S=freshState(sel); save();
+      el.classList.add("hide");
+      setTimeout(()=>{el.style.display="none"},560);
+      boot();
+      toast("WELCOME","Your first crew is standing by. Open MAPS.","#22d3ee","i-signal");
+    };
+  };
+  draw();
+}
+function boot(){
+  checkDaily();
+  UI.tab="home";
+  render();
+}
+(function init(){
+  const s=load();
+  if(s){S=s;$("#intro").style.display="none";boot();
+    const ready=S.active.filter(a=>Date.now()-a.start>=a.ms).length;
+    if(ready) setTimeout(()=>toast("WHILE YOU WERE AWAY",ready+" mission"+(ready>1?"s":"")+" finished and can be claimed.","#34d399","i-signal"),600);
+  } else intro();
+})();
+</script>
