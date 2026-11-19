@@ -3,7 +3,7 @@
 
   python observer.py --table "Evolution Auto #1"            # ავტომატური (OCR)
   python observer.py --manual --table "Lightning"           # ხელით შეყვანა
-  python observer.py --paper --k 12 --base 0.20 --prog 1,2,3,3,6,7
+  python observer.py --paper --k 12 --base 0.20 --staking flat
 
 ხელით რეჟიმის ბრძანებები:
   0..36       ნომრის ჩაწერა
@@ -60,14 +60,17 @@ class Logger:
     def _paper(self, n):
         sel, eng = self.paper["sel"], self.paper["eng"]
         if self.pick:
-            hit = n in self.pick
-            eng.settle(hit)
+            hit = n in self.pick[0]
+            eng.settle(hit, self.pick[1])
             print(f"      ვირტუალური: {'მოგება ✅' if hit else 'წაგება'} | ბალანსი {eng.bank:.2f}"
                   + (f" | გაჩერდა: {eng.stopped}" if eng.stopped else ""))
         sel.observe(self.dealer or "?", str(self.session), self.prev, n, self.direction)
         self.pick = None if eng.stopped else sel.choose(self.dealer or "?", n, self.direction)
+        if self.pick and not eng.next_stake_per_number(self.pick[1]):
+            self.pick = None  # (kelly) უპირატესობა საკმარისი არ არის → არ ვდებთ
         if self.pick:
-            print(f"      შემდეგი ვირტუალური ფსონი: {sorted(self.pick)} × {eng.next_stake_per_number():.2f}")
+            print(f"      შემდეგი ვირტუალური ფსონი: {sorted(self.pick[0])} × "
+                  f"{eng.next_stake_per_number(self.pick[1]):.2f} (შეფასებული მოხვედრა {self.pick[1]*100:.1f}%)")
 
     def undo(self):
         if not os.path.exists(self.path):
@@ -161,6 +164,7 @@ def main():
     ap.add_argument("--paper", action="store_true")
     ap.add_argument("--k", type=int, default=12)
     ap.add_argument("--base", type=float, default=0.20)
+    ap.add_argument("--staking", choices=["flat", "dalembert", "oscar", "kelly", "prog"], default="flat")
     ap.add_argument("--prog", default="1,2,3,3,6,7")
     ap.add_argument("--bankroll", type=float, default=200)
     ap.add_argument("--stop-loss", type=float)
@@ -172,7 +176,7 @@ def main():
     if a.paper:
         prog = [int(x) for x in a.prog.split(",")]
         paper = dict(sel=SectorSelector(a.k, a.min_profile),
-                     eng=Engine(a.k, a.base, prog, a.bankroll, a.stop_loss, a.take_profit))
+                     eng=Engine(a.k, a.base, a.bankroll, a.staking, prog, a.stop_loss, a.take_profit))
     lg = Logger(a.csv, a.table, paper)
     if a.manual:
         run_manual(lg)
