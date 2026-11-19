@@ -91,14 +91,32 @@ class Logger:
             return
         if self.pick:
             hit = n in self.pick[0]
-            for e in self.arena.values():
+            for name, e in self.arena.items():
+                stake = e.next_stake_per_number(self.pick[1])
                 e.settle(hit, self.pick[1])
+                if stake:
+                    self._bet_row(name, stake, n, hit, e)
             print(f"      ვირტუალური: {'მოგება ✅' if hit else 'წაგება'} | " +
                   " | ".join(f"{k} {e.bank:.2f}" for k, e in self.arena.items()))
         self.sel.observe(self.dealer or "?", str(self.session), self.prev, n, direction)
         self.pick = self.sel.choose(self.dealer or "?", n, direction)
         if self.pick:
             print(f"      შემდეგი ვირტუალური ფსონი: {sorted(self.pick[0])} (შეფასებული მოხვედრა {self.pick[1]*100:.1f}%)")
+
+    def _bet_row(self, engine, stake, n, hit, e):
+        """ვირტუალური ფსონების ისტორია — ისე, როგორც რეალურ ანგარიშში გამოჩნდებოდა."""
+        path = os.path.join(os.path.dirname(os.path.abspath(self.path)), "bets.csv")
+        new = not os.path.exists(path)
+        k = len(self.pick[0])
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            if new:
+                w.writerow(["timestamp", "table", "dealer", "session_id", "spin_in_session", "strategy",
+                            "numbers", "stake_per_number", "total_stake", "result", "hit", "payout", "pnl", "balance"])
+            payout = round(stake * 36, 2) if hit else 0
+            w.writerow([dt.datetime.now().isoformat(timespec="seconds"), self.table, self.dealer or "?", self.session,
+                        self.spin_i, engine, " ".join(map(str, sorted(self.pick[0]))), f"{stake:.2f}",
+                        f"{stake * k:.2f}", n, int(hit), f"{payout:.2f}", f"{payout - stake * k:+.2f}", f"{e.bank:.2f}"])
 
     def alert(self, msg):
         print(f"\a🔔 {msg}")
