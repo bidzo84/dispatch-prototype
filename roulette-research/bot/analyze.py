@@ -110,11 +110,18 @@ def main():
         by_session[(r["dealer"], r["session_id"])].append(r)
 
     dealer_d = defaultdict(list)
+    rel_d, prev_rel = defaultdict(list), defaultdict(list)
     session_hists, session_labels, session_nums = [], [], []
     for (dealer, sid), rows in by_session.items():
         rows.sort(key=lambda r: r["spin_in_session"])
         ds = [distance(p["number"], c["number"], c.get("direction", "")) for p, c in zip(rows, rows[1:])]
         dealer_d[dealer] += ds
+        for r in rows:  # ვიდეოდან: მანძილი გაშვების უჯრიდან შედეგამდე
+            if r.get("release_number") is not None:
+                rel_d[dealer].append(distance(r["release_number"], r["number"], r.get("direction", "")))
+        for p_, c in zip(rows, rows[1:]):  # შეიძლება თუ არა გაშვების უჯრის გამოცნობა წინა ნომრით?
+            if c.get("release_number") is not None:
+                prev_rel[dealer].append(distance(p_["number"], c["release_number"], c.get("direction", "")))
         session_nums.append([r["number"] for r in rows])
         if len(ds) >= 10:
             session_hists.append(np.bincount(ds, minlength=37))
@@ -149,6 +156,22 @@ def main():
         thr = 0.01 / max(tests, 1)  # ბონფერონის შესწორება — ბევრი დილერის შემოწმებისას
         verdict = "✅ სიგნალი" if p < thr else ("~ სუსტი, საჭიროა მეტი" if p < 0.05 else "— არ ჩანს")
         print(f"  {d:<18}{n:>7}{share*100:>8.1f}{'':>8}{p:>8.3f}  {verdict} (სექტორი +{start}..+{start+8})")
+
+    if any(len(v) >= 50 for v in rel_d.values()):
+        print("\n[ვიდეო] ხელწერა გაშვების უჯრიდან (ზუსტი ვერსია):")
+        print(f"  {'დილერი':<18}{'სპინი':>7}{'სექტ.%':>8}{'p':>8}  | წინა ნომერი → გაშვების უჯრა: {'სექტ.%':>7}{'p':>8}")
+        for d, ds in sorted(rel_d.items(), key=lambda x: -len(x[1])):
+            if len(ds) < 50:
+                continue
+            sh, p1, st = sector_test(np.array(ds))
+            line = f"  {d:<18}{len(ds):>7}{sh*100:>8.1f}{p1:>8.3f}"
+            pr = prev_rel.get(d, [])
+            if len(pr) >= 50:
+                sh2, p2, _ = sector_test(np.array(pr))
+                line += f"  |{'':>31}{sh2*100:>7.1f}{p2:>8.3f}"
+            print(line + (f"  ✅ სექტ. +{st}..+{st+8}" if p1 < 0.01 else ""))
+        print("  მარჯვენა სვეტი: თუ p პატარაა, გაშვების უჯრა წინა ნომრიდან გამოიცნობა → ხელწერა ფსონის\n"
+              "  დროსაც გამოსაყენებელია. თუ არა — ხელწერა არსებობს, მაგრამ ფსონის დახურვამდე ვერ ვხედავთ.")
 
     if len(set(session_labels)) >= 2 and len(session_labels) >= 6:
         acc, base, p, recall = dealer_id_test(session_hists, session_labels)

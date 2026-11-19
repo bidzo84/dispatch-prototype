@@ -83,6 +83,7 @@ class Engine:
         self.units, self.level, self.cycle = 1, 0, 0.0
         self.busts = self.wins = self.spins = 0
         self.staked = 0.0
+        self.history = [bankroll]
         self.stopped = None
         self.unit_net = base * (PAYOUT - k)  # წმინდა მოგება 1 ერთეულზე
 
@@ -118,6 +119,7 @@ class Engine:
         self.staked += s * self.k
         net = s * PAYOUT * hit - s * self.k
         self.bank += net
+        self.history = (self.history + [round(self.bank, 2)])[-3000:]
         self.wins += hit
         st = self.staking
         if st == "dalembert":

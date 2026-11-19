@@ -9,7 +9,8 @@ POS = {n: i for i, n in enumerate(WHEEL)}
 RED = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36}
 
 FIELDS = ["timestamp", "table", "dealer", "session_id", "spin_in_session",
-          "number", "color", "direction", "ocr_ok"]
+          "number", "color", "direction", "ocr_ok",
+          "release_number", "rotor_speed", "ball_speed"]  # ბოლო სამი — ვიდეოანალიზიდან
 
 
 def color(n: int) -> str:
@@ -45,12 +46,33 @@ def load_spins(path: str) -> list:
             except (ValueError, KeyError):
                 continue
             r["spin_in_session"] = int(r.get("spin_in_session") or 0)
+            rn = r.get("release_number")
+            r["release_number"] = int(rn) if rn not in (None, "", "None") else None
             out.append(r)
     return out
 
 
+def _migrate(path):
+    """ძველი ფორმატის CSV → ახალი სვეტებით (მონაცემი არ იკარგება)."""
+    with open(path, newline="", encoding="utf-8") as f:
+        rd = csv.DictReader(f)
+        if rd.fieldnames == FIELDS:
+            return
+        rows = list(rd)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=FIELDS)
+        w.writeheader()
+        w.writerows({k: r.get(k, "") for k in FIELDS} for r in rows)
+
+
+_checked = set()
+
+
 def append_spin(path: str, row: dict) -> None:
     new = not os.path.exists(path)
+    if not new and path not in _checked:
+        _migrate(path)
+    _checked.add(path)
     with open(path, "a", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
         if new:

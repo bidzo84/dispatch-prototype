@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ka">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ვირტუალური დაფა</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f3f2ee; --surface-1: #fcfcfb; --border: #e0ded7;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7c7b75;
+  --grid: #ebe9e3;
+  --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+  --red: #c8242f; --black: #2b2b2b; --green: #11823b; --chip-text: #ffffff;
+  --pick: #2a78d6; --good: #11823b; --critical: #c8242f; --warn-bg: #fff4d6; --warn-text: #6b4a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2d2a;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --grid: #262624;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --red: #d5464f; --black: #3a3a38; --green: #1d9a4b;
+    --pick: #5c9df0; --good: #3fbf6f; --critical: #ef6a6a; --warn-bg: #3a2f10; --warn-text: #f3d48a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #111110; --surface-1: #1a1a19; --border: #2e2d2a;
+  --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+  --grid: #262624;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+  --red: #d5464f; --black: #3a3a38; --green: #1d9a4b;
+  --pick: #5c9df0; --good: #3fbf6f; --critical: #ef6a6a; --warn-bg: #3a2f10; --warn-text: #f3d48a;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+       font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 1180px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+main > *, .grid2 > * { min-width: 0; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+h1 { font-size: 18px; margin: 0; } h2 { font-size: 14px; margin: 0 0 12px; color: var(--text-secondary); font-weight: 600; }
+.top { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; }
+.kv { display: flex; flex-direction: column; } .kv b { font-size: 16px; } .kv span { color: var(--text-muted); font-size: 12px; }
+.banner { background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+.alert { background: var(--warn-bg); color: var(--warn-text); border-radius: 8px; padding: 8px 12px; margin-top: 8px; }
+.strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
+.chip { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 6px; display: grid; place-items: center;
+        color: var(--chip-text); font-weight: 700; font-size: 13px; }
+.chip.red { background: var(--red); } .chip.black { background: var(--black); } .chip.green { background: var(--green); }
+.chip.latest { outline: 3px solid var(--text-primary); outline-offset: 1px; }
+.table-wrap { overflow-x: auto; }
+.felt { display: grid; grid-template-columns: 44px repeat(12, minmax(34px, 1fr)); grid-template-rows: repeat(3, 40px);
+        gap: 3px; min-width: 520px; }
+.cell { border-radius: 6px; display: grid; place-items: center; color: var(--chip-text); font-weight: 700; position: relative; }
+.cell.zero { grid-row: 1 / span 3; }
+.cell.pick { box-shadow: 0 0 0 3px var(--pick) inset; }
+.cell.pick::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%;
+                    background: var(--chip-text); }
+.cell.hit { outline: 3px solid var(--text-primary); outline-offset: 1px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); margin-top: 8px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 4px; }
+.arena { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.eng { border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+.eng .name { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.eng .bank { font-size: 20px; font-weight: 700; margin-top: 4px; }
+.pos { color: var(--good); } .neg { color: var(--critical); }
+.muted { color: var(--text-muted); font-size: 12px; }
+.chart { position: relative; }
+svg { display: block; width: 100%; height: auto; }
+.tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
+       border-radius: 8px; padding: 6px 8px; font-size: 12px; display: none; white-space: nowrap; box-shadow: 0 4px 12px rgb(0 0 0 / .12); }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+th { color: var(--text-muted); font-weight: 600; font-size: 12px; }
+.bar { height: 6px; background: var(--grid); border-radius: 3px; overflow: hidden; min-width: 80px; }
+.bar i { display: block; height: 100%; background: var(--series-1); border-radius: 3px; }
+.grid2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 900px) { .grid2 { grid-template-columns: 1.4fr 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="banner">⚠️ ვირტუალური რეჟიმი — რეალური ფსონი არ იდება. ბალანსები სიმულაციაა.</div>
+
+  <section class="card">
+    <div class="top">
+      <h1 id="table">—</h1>
+      <div class="kv"><b id="dealer">—</b><span>დილერი</span></div>
+      <div class="kv"><b id="session">—</b><span>სმენა / სპინი</span></div>
+      <div class="kv"><b id="dir">—</b><span>ბორბლის მიმართულება</span></div>
+      <div class="kv"><b id="release">—</b><span>ბოლო გაშვების უჯრა</span></div>
+      <div class="kv"><b id="idle">—</b><span>ბოლო სპინიდან</span></div>
+    </div>
+    <div id="alerts"></div>
+  </section>
+
+  <section class="card">
+    <h2>ბოლო ნომრები</h2>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <section class="card">
+    <h2 id="pickTitle">შემდეგი ვირტუალური ფსონი</h2>
+    <div class="table-wrap"><div class="felt" id="felt"></div></div>
+    <div class="legend">
+      <span><span class="sw" style="box-shadow:0 0 0 3px var(--pick) inset"></span>ვირტუალური ფსონი</span>
+      <span><span class="sw" style="outline:2px solid var(--text-primary)"></span>ბოლო მოსული ნომერი</span>
+    </div>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>არენა — სტრატეგიები ერთმანეთის წინააღმდეგ (ერთსა და იმავე ნომრებზე)</h2>
+      <div class="arena" id="arena"></div>
+      <div class="chart" id="chart"><svg id="svg" viewBox="0 0 640 240" role="img" aria-label="ბალანსის დინამიკა"></svg>
+        <div class="tip" id="tip"></div></div>
+      <div class="legend" id="chartLegend"></div>
+    </section>
+    <section class="card">
+      <h2>დილერები</h2>
+      <table><thead><tr><th>დილერი</th><th>სპინი</th><th>სმენა</th><th>პროფილი</th></tr></thead>
+        <tbody id="dealers"></tbody></table>
+      <p class="muted">ბოტი ფსონს „ურჩევს“ მხოლოდ მაშინ, როცა დილერის პროფილი შევსებულია და ხელწერა სტატისტიკურად ძლიერია.</p>
+    </section>
+  </div>
+</main>
+<script>
+const RED = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+const col = n => n === 0 ? "green" : RED.has(n) ? "red" : "black";
+const SERIES = ["flat", "oscar", "kelly", "prog", "dalembert"];
+const NAMES = { flat: "თანაბარი", oscar: "ოსკარი", kelly: "კელი ¼", prog: "პროგრესია", dalembert: "დ'ალამბერი" };
+const sColor = k => `var(--series-${Math.min(SERIES.indexOf(k) + 1, 4) || 1})`;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// რულეტკის მაგიდის განლაგება: 0 მარცხნივ, 3 რიგი × 12 სვეტი
+(function buildFelt() {
+  const f = $("felt");
+  f.insertAdjacentHTML("beforeend", `<div class="cell zero chip green" data-n="0" style="grid-column:1">0</div>`);
+  for (let row = 0; row < 3; row++) for (let c = 0; c < 12; c++) {
+    const n = 3 * (c + 1) - row;
+    f.insertAdjacentHTML("beforeend",
+      `<div class="cell ${col(n)} chip" data-n="${n}" style="grid-row:${row + 1};grid-column:${c + 2};width:auto;height:auto">${n}</div>`);
+  }
+})();
+
+function drawChart(arena) {
+  const svg = $("svg"), W = 640, H = 240, P = { l: 48, r: 72, t: 12, b: 24 };
+  const keys = SERIES.filter(k => arena[k]);
+  const all = keys.flatMap(k => arena[k].history);
+  if (!all.length) { svg.innerHTML = ""; return; }
+  const start = arena[keys[0]].start;
+  let lo = Math.min(start, ...all), hi = Math.max(start, ...all);
+  if (hi - lo < 1) { lo -= 1; hi += 1; }
+  const pad = (hi - lo) * 0.08; lo -= pad; hi += pad;
+  const n = Math.max(...keys.map(k => arena[k].history.length), 2);
+  const x = i => P.l + (W - P.l - P.r) * i / (n - 1), y = v => P.t + (H - P.t - P.b) * (1 - (v - lo) / (hi - lo));
+  let g = "";
+  for (let i = 0; i <= 4; i++) {
+    const v = lo + (hi - lo) * i / 4;
+    g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>`
+       + `<text x="${P.l - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--text-muted)">${v.toFixed(0)}</text>`;
+  }
+  g += `<line x1="${P.l}" x2="${W - P.r}" y1="${y(start)}" y2="${y(start)}" stroke="var(--text-muted)" stroke-dasharray="4 4"/>`;
+  const labels = [];
+  for (const k of keys) {
+    const h = arena[k].history;
+    g += `<polyline fill="none" stroke="${sColor(k)}" stroke-width="2" stroke-linejoin="round" points="${h.map((v, i) => `${x(i)},${y(v)}`).join(" ")}"/>`;
+    labels.push({ k, y: y(h[h.length - 1]), x: x(h.length - 1) });
+  }
+  labels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < labels.length; i++) if (labels[i].y - labels[i - 1].y < 14) labels[i].y = labels[i - 1].y + 14;
+  for (const L of labels) g += `<text x="${W - P.r + 6}" y="${L.y + 4}" font-size="11" fill="var(--text-secondary)">${NAMES[L.k]}</text>`;
+  g += `<text x="${P.l}" y="${H - 6}" font-size="11" fill="var(--text-muted)">ვირტუალური ფსონები →</text>`;
+  g += `<line id="xh" y1="${P.t}" y2="${H - P.b}" stroke="var(--text-muted)" visibility="hidden"/>`;
+  g += `<rect x="${P.l}" y="${P.t}" width="${W - P.l - P.r}" height="${H - P.t - P.b}" fill="transparent" id="hit"/>`;
+  svg.innerHTML = g;
+  const tip = $("tip"), xh = svg.querySelector("#xh");
+  svg.querySelector("#hit").onmousemove = e => {
+    const r = svg.getBoundingClientRect(), sx = (e.clientX - r.left) * W / r.width;
+    const i = Math.max(0, Math.min(n - 1, Math.round((sx - P.l) / (W - P.l - P.r) * (n - 1))));
+    xh.setAttribute("x1", x(i)); xh.setAttribute("x2", x(i)); xh.setAttribute("visibility", "visible");
+    tip.innerHTML = `<b>ფსონი #${i}</b><br>` + keys.map(k => {
+      const v = arena[k].history[Math.min(i, arena[k].history.length - 1)];
+      return `<span class="sw" style="background:${sColor(k)}"></span>${NAMES[k]}: ${v.toFixed(2)}`;
+    }).join("<br>");
+    tip.style.display = "block";
+    const px = (e.clientX - r.left) + 12;
+    tip.style.left = Math.min(px, r.width - tip.offsetWidth - 4) + "px";
+    tip.style.top = Math.max(0, e.clientY - r.top - 20) + "px";
+  };
+  svg.querySelector("#hit").onmouseleave = () => { tip.style.display = "none"; xh.setAttribute("visibility", "hidden"); };
+  $("chartLegend").innerHTML = keys.map(k => `<span><span class="sw" style="background:${sColor(k)}"></span>${NAMES[k]}</span>`).join("")
+    + `<span><span class="sw" style="border-top:2px dashed var(--text-muted);border-radius:0;height:0;width:14px"></span>საწყისი ბიუჯეტი</span>`;
+}
+
+function render(s) {
+  $("table").textContent = s.table || "—";
+  $("dealer").textContent = s.dealer || "—";
+  $("session").textContent = `#${s.session || "—"} / ${s.spin_i || 0}`;
+  const w = s.wheel;
+  $("dir").textContent = w && w.direction ? `${w.direction === "cw" ? "↻ საათის ისრით" : "↺ საწინააღმდეგოდ"} · ${w.rotor_speed}°/წმ` : (w ? "ვიდეო — ელოდება" : "ვიდეო გამორთულია");
+  $("release").textContent = s.last_release === "" || s.last_release == null ? "—" : s.last_release;
+  const idle = s.seconds_since_spin || 0;
+  $("idle").textContent = idle < 120 ? `${idle} წმ` : `${Math.floor(idle / 60)} წთ`;
+  $("alerts").innerHTML = (s.alerts || []).slice(-3).map(a => `<div class="alert">🔔 ${esc(a)}</div>`).join("");
+
+  const rec = s.recent || [];
+  $("strip").innerHTML = rec.slice().reverse().map((r, i) =>
+    `<div class="chip ${col(r.n)} ${i === 0 ? "latest" : ""}" title="${esc(r.d)}">${r.n}</div>`).join("");
+
+  const pick = new Set(s.pick || []), last = rec.length ? rec[rec.length - 1].n : null;
+  document.querySelectorAll(".felt .cell").forEach(c => {
+    const n = +c.dataset.n;
+    c.classList.toggle("pick", pick.has(n));
+    c.classList.toggle("hit", n === last);
+  });
+  $("pickTitle").textContent = pick.size
+    ? `შემდეგი ვირტუალური ფსონი — ${pick.size} ნომერი · შეფასებული მოხვედრა ${(s.q * 100).toFixed(1)}% (სამართლიანი ${(pick.size / 37 * 100).toFixed(1)}%)`
+    : "შემდეგი ვირტუალური ფსონი — არ არის (დილერის ხელწერა ჯერ არ დადასტურებულა)";
+
+  const A = s.arena || {};
+  $("arena").innerHTML = SERIES.filter(k => A[k]).map(k => {
+    const e = A[k], pnl = e.bank - e.start;
+    return `<div class="eng"><div class="name"><span class="sw" style="background:${sColor(k)}"></span>${NAMES[k]}</div>
+      <div class="bank">${e.bank.toFixed(2)}</div>
+      <div class="${pnl >= 0 ? "pos" : "neg"}">${pnl >= 0 ? "▲ +" : "▼ "}${pnl.toFixed(2)}</div>
+      <div class="muted">ფსონი ${e.spins} · მოგება ${e.wins}${e.stopped ? " · ⏹ " + esc(e.stopped) : ""}</div></div>`;
+  }).join("") || `<p class="muted">არენა გამორთულია.</p>`;
+  drawChart(A);
+
+  const D = s.dealers || {}, need = s.min_profile || 300;
+  $("dealers").innerHTML = Object.entries(D).sort((a, b) => b[1].spins - a[1].spins).map(([d, v]) => {
+    const p = Math.min(1, v.profile / need);
+    return `<tr><td>${d === s.dealer ? "▶ " : ""}${esc(d)}</td><td>${v.spins}</td><td>${v.sessions}</td>
+      <td><div class="bar" title="${v.profile} / ${need}"><i style="width:${(p * 100).toFixed(0)}%"></i></div>
+      <span class="muted">${v.profile}/${need}</span></td></tr>`;
+  }).join("");
+}
+
+async function tick() {
+  try {
+    const r = await fetch("state.json?" + Date.now(), { cache: "no-store" });
+    if (r.ok) render(await r.json());
+  } catch (e) { /* observer ჯერ არ მუშაობს */ }
+}
+tick(); setInterval(tick, 1000);
+</script>
+</body>
+</html>

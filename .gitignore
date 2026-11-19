@@ -2,3 +2,5 @@ roulette-research/bot/spins.csv
 roulette-research/bot/config.json
 roulette-research/bot/calib_preview.png
 roulette-research/bot/__pycache__/
+roulette-research/bot/state.json
+roulette-research/bot/wheel_preview.png
