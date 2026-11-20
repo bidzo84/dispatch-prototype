@@ -33,6 +33,8 @@ def main():
 
     root = tk.Tk()
     root.title("რეგიონების მონიშვნა")
+    # Mac Retina: სურათი 2×-ია (პიქსელები), mss-ის კოორდინატები კი წერტილებშია
+    retina = img.width / mon["width"]
     scale = min(1, (root.winfo_screenwidth() - 80) / img.width, (root.winfo_screenheight() - 160) / img.height)
     view = img.resize((int(img.width * scale), int(img.height * scale)))
     tkimg = ImageTk.PhotoImage(view)
@@ -68,7 +70,8 @@ def main():
             return
         x, y, w, h = state["box"]
         name = REGIONS[state["i"]][0]
-        result[name] = [int(x / scale) + mon["left"], int(y / scale) + mon["top"], int(w / scale), int(h / scale)]
+        k = scale * retina
+        result[name] = [int(x / k) + mon["left"], int(y / k) + mon["top"], int(w / k), int(h / k)]
         cv.itemconfig(state["rect"], outline="lime")
         cv.create_text(x + 4, y - 8, text=name, anchor="w", fill="lime", font=("Arial", 11, "bold"))
         state.update(rect=None, box=None, i=state["i"] + 1)
@@ -90,7 +93,7 @@ def main():
         prev = img.copy()
         d = ImageDraw.Draw(prev)
         for n, (x, y, w, h) in result.items():
-            x -= mon["left"]; y -= mon["top"]
+            x, y, w, h = ((x - mon["left"]) * retina, (y - mon["top"]) * retina, w * retina, h * retina)
             d.rectangle([x, y, x + w, y + h], outline=(0, 255, 0), width=3)
             d.text((x + 3, y - 14), n, fill=(0, 255, 0))
         prev.save("calib_preview.png")

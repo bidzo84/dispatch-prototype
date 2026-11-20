@@ -228,6 +228,7 @@ def _preview():
         s = sct.grab({"left": x, "top": y, "width": w, "height": h})
     img = Image.frombytes("RGB", s.size, s.bgra, "raw", "BGRX")
     d = ImageDraw.Draw(img)
+    w, h = img.size  # Mac Retina-ზე სურათი რეგიონზე 2×-ით დიდია
     cx, cy = g["center"][0] * w, g["center"][1] * h
     for r, c in [(g["pocket_r"][0], "lime"), (g["pocket_r"][1], "lime"), (g["ball_r"][0], "cyan"), (g["ball_r"][1], "cyan")]:
         d.ellipse([cx - r * w / 2, cy - r * h / 2, cx + r * w / 2, cy + r * h / 2], outline=c, width=2)

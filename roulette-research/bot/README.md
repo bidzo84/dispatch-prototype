@@ -29,6 +29,13 @@ python board.py                              # ვირტუალური �
 სიზუსტე სინთეტიკურ ტესტზე: მიმართულება 40/40, გაშვების უჯრა ზუსტად 35/40, ±1 უჯრით 40/40.
 რეალურ სტრიმზე დამოკიდებულია კამერის კუთხეზე, ხარისხზე და კადრების სიხშირეზე.
 
+## ინსტალაცია (Mac)
+1. Python 3.11+ — https://www.python.org/downloads/macos/ (ოფიციალური ინსტალერი; მასში tkinter უკვე არის).
+2. Tesseract (ავტომატური რეჟიმისთვის): Homebrew-ით — `brew install tesseract` (Homebrew: https://brew.sh).
+3. Terminal → ამ საქაღალდეში: `python3 -m pip install -r requirements.txt`
+4. **ეკრანის ჩაწერის ნებართვა:** System Settings → Privacy & Security → Screen & System Audio Recording → ჩართე **Terminal** → Terminal გადატვირთე. ამის გარეშე ბოტი მხოლოდ შავ ეკრანს დაინახავს.
+5. Mac-ზე ბრძანებებში `python`-ის ნაცვლად წერე `python3`.
+
 ## ნაბიჯები
 | # | ბრძანება | რას აკეთებს |
 |---|---|---|
